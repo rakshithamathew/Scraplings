@@ -1,0 +1,25 @@
+{
+  "resumes": [
+    {
+      "name": "Frontend Resume",
+      "path": "resumes/frontend_resume.pdf",
+      "skills": ["JavaScript", "TypeScript", "React", "HTML", "CSS"],
+      "target_roles": ["Frontend Developer", "Frontend Engineer", "UI Engineer"],
+      "keywords": ["frontend", "user interface", "web application"]
+    },
+    {
+      "name": "Healthcare Resume",
+      "path": "resumes/healthcare_resume.pdf",
+      "skills": [],
+      "target_roles": ["Healthcare", "Clinical", "Health Technology"],
+      "keywords": ["healthcare", "clinical", "medical", "patient"]
+    },
+    {
+      "name": "Full Stack Resume",
+      "path": "resumes/fullstack_resume.pdf",
+      "skills": ["Python", "JavaScript", "React", "SQL"],
+      "target_roles": ["Full Stack Developer", "Full Stack Engineer", "Software Engineer"],
+      "keywords": ["full stack", "backend", "API", "web application"]
+    }
+  ]
+}

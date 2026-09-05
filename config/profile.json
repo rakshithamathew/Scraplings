@@ -1,0 +1,34 @@
+{
+  "target_titles": [
+    "Software Engineer",
+    "Python Engineer",
+    "Backend Engineer",
+    "Data Engineer"
+  ],
+  "skills": [
+    "Python",
+    "SQL",
+    "Git",
+    "REST API"
+  ],
+  "preferred_locations": [
+    "Remote",
+    "India",
+    "Bengaluru",
+    "Hyderabad"
+  ],
+  "minimum_experience": 0,
+  "maximum_experience": 8,
+  "keywords": [
+    "backend",
+    "automation",
+    "API",
+    "data"
+  ],
+  "excluded_keywords": [
+    "director",
+    "principal",
+    "staff",
+    "manager"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "sources": [
+    {
+      "type": "greenhouse",
+      "company": "Greenhouse",
+      "url": "https://job-boards.greenhouse.io/greenhouse",
+      "limit": 5,
+      "request_delay": 0.5
+    },
+    {
+      "type": "lever",
+      "company": "Lever Demo",
+      "url": "https://jobs.lever.co/leverdemo",
+      "limit": 5,
+      "request_delay": 0.5
+    }
+  ]
+}
