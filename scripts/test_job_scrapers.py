@@ -68,4 +68,5 @@ def parse_args() -> argparse.Namespace:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    logging.getLogger("scrapling").propagate = False
     raise SystemExit(asyncio.run(run(parse_args())))

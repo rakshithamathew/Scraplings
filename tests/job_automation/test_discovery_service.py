@@ -4,8 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from job_automation.database import JobRepository, initialize_database
-from job_automation.normalizer import NormalizedJob
+from job_automation.database import JobRepository, JobStatus, initialize_database
+from job_automation.matching import UserProfile
+from job_automation.normalizer import NormalizedJob, WorkplaceType
 from job_automation.scraper.service import (
     JobDiscoveryService,
     SourceConfig,
@@ -13,6 +14,8 @@ from job_automation.scraper.service import (
     build_scraper,
     load_sources,
 )
+from job_automation.scraper.linkedin import LinkedInScraper
+from job_automation.scraper.naukri import NaukriScraper
 
 
 @pytest.fixture
@@ -133,7 +136,71 @@ async def test_service_continues_deduplicates_updates_and_saves(
 
 
 def test_build_scraper_rejects_unknown_source() -> None:
-    source = SourceConfig(type="linkedin", company="Example", url="https://example.test")
+    source = SourceConfig(type="unsupported", company="Example", url="https://example.test")
 
     with pytest.raises(UnsupportedSourceError, match="unsupported source type"):
         build_scraper(source)
+
+
+def test_build_scraper_supports_public_job_portals() -> None:
+    linkedin = build_scraper(
+        SourceConfig(
+            type="linkedin",
+            url="https://www.linkedin.com/jobs/search/",
+            options={"queries": ["Frontend Developer"]},
+        )
+    )
+    naukri = build_scraper(
+        SourceConfig(
+            type="naukri",
+            url="https://www.naukri.com/jobs-in-india",
+            options={"queries": ["Angular Developer"]},
+        )
+    )
+
+    assert isinstance(linkedin, LinkedInScraper)
+    assert isinstance(naukri, NaukriScraper)
+
+
+@pytest.mark.asyncio
+async def test_service_applies_strict_location_filter_and_stores_skip_reason(
+    repository: JobRepository,
+) -> None:
+    profile = UserProfile(target_titles=["Frontend Engineer"], skills=["React"])
+    jobs = [
+        NormalizedJob(
+            external_id="global",
+            title="Senior Frontend Engineer",
+            company="Example",
+            location="Remote worldwide",
+            workplace_type=WorkplaceType.REMOTE,
+            source="greenhouse",
+            application_url="https://example.test/global",
+        ),
+        NormalizedJob(
+            external_id="onsite",
+            title="Frontend Engineer",
+            company="Example",
+            location="London",
+            workplace_type=WorkplaceType.ONSITE,
+            source="greenhouse",
+            application_url="https://example.test/london",
+        ),
+    ]
+
+    class FakeScraper:
+        async def search_jobs(self, **kwargs: object) -> list[NormalizedJob]:
+            return jobs
+
+    summary = await JobDiscoveryService(
+        repository,
+        profile=profile,
+        scraper_factory=lambda _: FakeScraper(),  # type: ignore[arg-type]
+    ).run([SourceConfig(type="greenhouse", url="https://example.test/jobs")])
+
+    stored = {job.external_id: job for job in repository.get_jobs()}
+    assert summary.remote_eligible == 1
+    assert summary.filtered == 1
+    assert stored["global"].status is JobStatus.DISCOVERED
+    assert stored["onsite"].status is JobStatus.SKIPPED
+    assert stored["onsite"].skip_reason == "Onsite role is outside Bengaluru"

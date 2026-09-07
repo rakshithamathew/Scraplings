@@ -1,4 +1,4 @@
-"""Greenhouse application-plan adapter; no form submission."""
+"""Greenhouse application adapter."""
 
 from urllib.parse import urlsplit
 
@@ -24,3 +24,12 @@ class GreenhouseApplicationAgent(BaseApplicationAgent):
                 notes="Must be reviewed on the public application page.",
             ),
         )
+
+    async def open_application(self, job: ApplicationJob) -> bool:
+        opened = await super().open_application(job)
+        if await self.page.locator('input[type="file"]').count() == 0:
+            apply_controls = self.page.get_by_role("link", name="Apply for this job", exact=False)
+            if await apply_controls.count():
+                await apply_controls.first.click(timeout=self.navigation_timeout_ms)
+                await self.page.wait_for_load_state("domcontentloaded")
+        return opened

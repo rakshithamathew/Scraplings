@@ -243,12 +243,14 @@ class WorkdayScraper(BaseJobScraper):
             "title": _first_value(raw, "title", "jobTitle", "text"),
             "company": _first_value(raw, "company", "companyName") or self.company,
             "location": locations,
+            "workplace_type": _first_value(raw, "workplaceType", "workplace_type", "remoteType"),
             "description": description,
             "skills": raw.get("skills"),
             "source": self.source,
             "source_url": _first_value(raw, "sourceUrl", "externalUrl", "source_url") or public_url,
             "application_url": _first_value(raw, "applicationUrl", "applyUrl", "application_url") or public_url,
             "posted_at": _first_value(raw, "postedOn", "postedAt", "datePosted", "startDate", "posted_at"),
+            "is_open": True,
         }
         return normalize_job(values, source=self.source, base_url=self.config.careers_url)
 

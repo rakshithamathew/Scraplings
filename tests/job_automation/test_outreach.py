@@ -132,7 +132,16 @@ def test_create_and_store_draft_updates_tracking(tmp_path: Path) -> None:
 
         assert draft.approval_status == "NEEDS_APPROVAL"
         assert stored.contact_name == "Robin Recruiter"
+        assert stored.contact_role == "Technical Recruiter"
         assert stored.contact_email == "robin.recruiter@example.test"
         assert stored.outreach_status is OutreachStatus.DRAFTED
+
+        with pytest.raises(ValueError, match="already exists"):
+            GmailDraftWorkflow().create_and_store_draft(
+                repository,
+                job,
+                _contact("Robin Recruiter", "Technical Recruiter"),
+                sender_name="Applicant",
+            )
     finally:
         engine.dispose()

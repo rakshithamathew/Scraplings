@@ -116,3 +116,26 @@ def test_initialization_adds_recommended_resume_to_existing_database(tmp_path: P
     assert {"recommended_resume", "application_status"}.issubset(columns)
     assert title == "Existing Job"
     engine.dispose()
+
+
+def test_active_resume_is_singleton(repository: JobRepository) -> None:
+    first = repository.set_active_resume(
+        original_filename="first.pdf",
+        path="resumes/first.pdf",
+        content_type="application/pdf",
+        sha256="a" * 64,
+        parsed_profile={"skills": ["React"]},
+    )
+    second = repository.set_active_resume(
+        original_filename="second.docx",
+        path="resumes/second.docx",
+        content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        sha256="b" * 64,
+        parsed_profile={"skills": ["Angular"]},
+    )
+
+    active = repository.get_active_resume()
+    assert first.id == second.id == 1
+    assert active is not None
+    assert active.original_filename == "second.docx"
+    assert active.parsed_profile["skills"] == ["Angular"]

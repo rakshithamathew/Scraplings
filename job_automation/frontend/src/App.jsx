@@ -1,31 +1,34 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
-const FILTERS = ["ALL", "QUALIFIED", "APPLIED", "INTERVIEW"];
-const APPLICATION_METHODS = ["MANUAL", "GREENHOUSE", "LEVER", "WORKDAY", "BROWSER"];
-const EMPTY_STATS = {
-  total_jobs: 0,
-  discovered: 0,
-  qualified: 0,
-  ready_to_apply: 0,
-  applied: 0,
-  interview: 0,
-};
+const FILTERS = ["ALL", "QUALIFIED", "NEEDS_REVIEW", "APPLIED"];
+const PAGE_SIZES = [5, 10, 12];
+const SCORE_FILTERS = [
+  { label: "All scores", value: "" },
+  { label: "60+", value: "60" },
+  { label: "70+", value: "70" },
+  { label: "80+", value: "80" },
+  { label: "90+", value: "90" },
+];
+const EMPTY_STATS = { total_jobs: 0, qualified: 0, needs_review: 0, applied: 0 };
+const CONNECTION_PLATFORMS = ["linkedin", "naukri", "indeed"];
 
 async function api(path, options = {}) {
-  const response = await fetch(`${API_URL}${path}`, {
-    headers: { "Content-Type": "application/json", ...options.headers },
-    ...options,
-  });
+  const headers = options.body instanceof FormData
+    ? { ...options.headers }
+    : { "Content-Type": "application/json", ...options.headers };
+  const response = await fetch(`${API_URL}${path}`, { ...options, headers });
   if (!response.ok) {
     let message = `Request failed (${response.status})`;
     try {
       const body = await response.json();
-      message = body.detail || message;
+      message = typeof body.detail === "string" ? body.detail : message;
     } catch {
-      // Keep the status-based message for non-JSON errors.
+      // Keep the status-based fallback for non-JSON responses.
     }
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
   }
   return response.json();
 }
@@ -36,36 +39,47 @@ function formatStatus(status) {
 
 function formatDate(value) {
   if (!value) return "-";
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" })
+    .format(new Date(value));
 }
 
 function App() {
   const [jobs, setJobs] = useState([]);
   const [stats, setStats] = useState(EMPTY_STATS);
+  const [resume, setResume] = useState(null);
+  const [connections, setConnections] = useState([]);
   const [filter, setFilter] = useState("ALL");
-  const [selectedJob, setSelectedJob] = useState(null);
-  const [applicationJob, setApplicationJob] = useState(null);
-  const [resumeUsed, setResumeUsed] = useState("");
-  const [applicationMethod, setApplicationMethod] = useState("MANUAL");
+  const [minimumScore, setMinimumScore] = useState("");
+  const [locationFilter, setLocationFilter] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSizeChoice, setPageSizeChoice] = useState("AUTO");
+  const [autoPageSize, setAutoPageSize] = useState(5);
   const [busy, setBusy] = useState("");
+  const [selectedJobIds, setSelectedJobIds] = useState(() => new Set());
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const fileInputRef = useRef(null);
+  const tableViewportRef = useRef(null);
 
   const refresh = useCallback(async (activeFilter = filter) => {
     setBusy("refresh");
     setError("");
     try {
-      const query = activeFilter === "ALL" ? "" : `?status=${activeFilter}`;
-      const [nextJobs, nextStats] = await Promise.all([
+      const query = activeFilter === "ALL"
+        ? "?limit=2000"
+        : activeFilter === "NEEDS_REVIEW"
+          ? "?needs_review=true&limit=2000"
+          : `?status=${activeFilter}&limit=2000`;
+      const [nextJobs, nextStats, nextResume, nextConnections] = await Promise.all([
         api(`/jobs${query}`),
         api("/stats"),
+        api("/resume").catch((requestError) => requestError.status === 404 ? null : Promise.reject(requestError)),
+        api("/connections"),
       ]);
       setJobs(nextJobs);
       setStats(nextStats);
+      setResume(nextResume);
+      setConnections(nextConnections);
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -73,20 +87,69 @@ function App() {
     }
   }, [filter]);
 
+  useEffect(() => { refresh(filter); }, [filter, refresh]);
+
   useEffect(() => {
-    refresh(filter);
-  }, [filter, refresh]);
+    if (!connections.some((connection) => connection.status === "connecting")) return undefined;
+    const timer = window.setInterval(() => {
+      api("/connections").then(setConnections).catch(() => {});
+    }, 2500);
+    return () => window.clearInterval(timer);
+  }, [connections]);
+
+  const locationKey = locationFilter.trim().toLocaleLowerCase();
+  const filteredJobs = jobs.filter((job) => {
+    const scoreMatches = minimumScore === ""
+      || (job.match_score != null && job.match_score >= Number(minimumScore));
+    const locationMatches = !locationKey
+      || (job.location || "").toLocaleLowerCase().includes(locationKey);
+    return scoreMatches && locationMatches;
+  });
+  const pageSize = pageSizeChoice === "AUTO" ? autoPageSize : Number(pageSizeChoice);
+  const totalPages = Math.max(1, Math.ceil(filteredJobs.length / pageSize));
+  const pageStart = (currentPage - 1) * pageSize;
+  const visibleJobs = filteredJobs.slice(pageStart, pageStart + pageSize);
+  const selectableVisibleJobs = visibleJobs.filter((job) =>
+    job.status === "QUALIFIED" && job.application_status !== "NEEDS_REVIEW"
+      && !job.review_reason && job.match_score > 70 && job.application_url
+  );
+  const allVisibleSelected = selectableVisibleJobs.length > 0
+    && selectableVisibleJobs.every((job) => selectedJobIds.has(job.id));
+
+  useEffect(() => { setCurrentPage((page) => Math.min(page, totalPages)); }, [totalPages]);
+
+  useEffect(() => {
+    if (pageSizeChoice !== "AUTO" || !tableViewportRef.current) return undefined;
+    const viewport = tableViewportRef.current;
+    const calculate = () => {
+      const headerHeight = viewport.querySelector("thead")?.getBoundingClientRect().height || 0;
+      const rows = [...viewport.querySelectorAll("tbody tr")];
+      const rowHeight = rows.length ? Math.max(...rows.map((row) => row.getBoundingClientRect().height)) : 42;
+      const next = Math.max(1, Math.floor((viewport.clientHeight - headerHeight - 2) / rowHeight));
+      setAutoPageSize((current) => current === next ? current : next);
+    };
+    const frame = requestAnimationFrame(calculate);
+    const observer = new ResizeObserver(calculate);
+    observer.observe(viewport);
+    return () => { cancelAnimationFrame(frame); observer.disconnect(); };
+  }, [pageSizeChoice, jobs, filter, minimumScore, locationFilter]);
 
   async function runAction(name, path) {
     setBusy(name);
     setError("");
     setMessage("");
     try {
-      const result = await api(path, { method: "POST" });
-      if (name === "scrape") {
-        setMessage(`Scrape complete: ${result.new_jobs} new, ${result.duplicates} existing.`);
+      const options = name === "apply"
+        ? { method: "POST", body: JSON.stringify({ job_ids: [...selectedJobIds] }) }
+        : { method: "POST" };
+      const result = await api(path, options);
+      if (name === "scrape") setMessage(`Scrape complete: ${result.new_jobs} new, ${result.jobs_scored} scored.`);
+      else if (name === "score") setMessage(`Scoring complete: ${result.jobs_scored} scored, ${result.qualified} qualified.`);
+      else if (result.eligible === 0) {
+        setMessage(`None of the ${result.selected} selected jobs are currently eligible.`);
       } else {
-        setMessage(`Scoring complete: ${result.jobs_scored} jobs scored.`);
+        setMessage(`Selected ${result.selected}: ${result.applied} applied, ${result.needs_review || 0} need review, ${result.failed} failed, ${result.ineligible || 0} ineligible.`);
+        setSelectedJobIds(new Set());
       }
       await refresh(filter);
     } catch (requestError) {
@@ -95,86 +158,42 @@ function App() {
     }
   }
 
-  async function updateStatus(job, status) {
-    setBusy(`status-${job.id}`);
+  async function uploadResume(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setBusy("resume");
     setError("");
-    try {
-      await api(`/jobs/${job.id}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ status }),
-      });
-      setMessage(`${job.title} marked as ${formatStatus(status).toLowerCase()}.`);
-      await refresh(filter);
-    } catch (requestError) {
-      setError(requestError.message);
-      setBusy("");
-    }
-  }
-
-  function openAppliedForm(job) {
-    setApplicationJob(job);
-    setResumeUsed(job.recommended_resume || "");
-    setApplicationMethod("MANUAL");
-  }
-
-  async function markApplied(event) {
-    event.preventDefault();
-    if (!applicationJob) return;
-    setBusy(`apply-${applicationJob.id}`);
-    setError("");
-    try {
-      await api(`/jobs/${applicationJob.id}/mark-applied`, {
-        method: "POST",
-        body: JSON.stringify({
-          resume_used: resumeUsed.trim(),
-          application_method: applicationMethod,
-          applied_at: new Date().toISOString(),
-        }),
-      });
-      setMessage(`${applicationJob.title} marked as applied.`);
-      setApplicationJob(null);
-      setSelectedJob(null);
-      await refresh(filter);
-    } catch (requestError) {
-      setError(requestError.message);
-      setBusy("");
-    }
-  }
-
-  function rowActions(job) {
-    if (job.status === "QUALIFIED") {
-      return (
-        <>
-          <button className="text-button" onClick={() => setSelectedJob(job)}>Open Job</button>
-          <button className="text-button" onClick={() => updateStatus(job, "READY_TO_APPLY")} disabled={Boolean(busy)}>Mark Ready</button>
-          <button className="text-button danger" onClick={() => updateStatus(job, "SKIPPED")} disabled={Boolean(busy)}>Skip</button>
-        </>
-      );
-    }
-    if (job.status === "READY_TO_APPLY") {
-      return (
-        <>
-          <a href={job.application_url} target="_blank" rel="noreferrer">Open Application</a>
-          <button className="text-button" onClick={() => openAppliedForm(job)} disabled={Boolean(busy)}>Mark Applied</button>
-        </>
-      );
-    }
-    if (job.status === "APPLIED") {
-      return <span className="tracked">Application tracked</span>;
-    }
-    return (
-      <>
-        <button className="text-button" onClick={() => setSelectedJob(job)}>Open Job</button>
-        {job.status !== "SKIPPED" && (
-          <button className="text-button danger" onClick={() => updateStatus(job, "SKIPPED")} disabled={Boolean(busy)}>Skip</button>
-        )}
-      </>
-    );
-  }
-
-  function selectFilter(nextFilter) {
     setMessage("");
-    setFilter(nextFilter);
+    const body = new FormData();
+    body.append("file", file);
+    try {
+      const uploaded = await api("/resume/upload", { method: "POST", body });
+      setResume(uploaded);
+      setMessage(`${uploaded.filename} uploaded, parsed, and set active.`);
+      await refresh(filter);
+    } catch (requestError) {
+      setError(requestError.message);
+      setBusy("");
+    }
+  }
+
+  async function connectPlatform(platform) {
+    setBusy(`connect-${platform}`);
+    setError("");
+    setMessage("");
+    try {
+      const connection = await api(`/connections/${platform}/connect`, { method: "POST" });
+      setConnections((current) => [
+        ...current.filter((item) => item.platform !== platform),
+        connection,
+      ]);
+      setMessage(`${platform[0].toUpperCase()}${platform.slice(1)} login opened. Complete login manually, then close that browser window.`);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setBusy("");
+    }
   }
 
   return (
@@ -183,148 +202,109 @@ function App() {
         <div>
           <p className="eyebrow">Local workspace</p>
           <h1>Job Automation</h1>
+          <p className="active-resume">Active Resume: <strong>{resume?.filename || "Not uploaded"}</strong>{resume && <span> · Active</span>}</p>
         </div>
         <div className="toolbar" aria-label="Job actions">
-          <button className="button secondary" onClick={() => refresh(filter)} disabled={Boolean(busy)}>
-            Refresh
-          </button>
-          <button className="button" onClick={() => runAction("scrape", "/scrape")} disabled={Boolean(busy)}>
-            {busy === "scrape" ? "Running..." : "Run Scraper"}
-          </button>
-          <button className="button" onClick={() => runAction("score", "/score")} disabled={Boolean(busy)}>
-            {busy === "score" ? "Running..." : "Run Scoring"}
-          </button>
+          <input ref={fileInputRef} className="file-input" type="file" accept=".pdf,.docx" onChange={uploadResume} />
+          <button className="button secondary" onClick={() => fileInputRef.current?.click()} disabled={Boolean(busy)}>{busy === "resume" ? "Uploading..." : "Upload Resume"}</button>
+          <button className="button" onClick={() => runAction("scrape", "/scrape")} disabled={Boolean(busy)}>Run Scraper</button>
+          <button className="button" onClick={() => runAction("score", "/score")} disabled={Boolean(busy)}>Run Scoring</button>
+          <button className="button" onClick={() => runAction("apply", "/applications/run")} disabled={Boolean(busy) || selectedJobIds.size === 0}>Auto Apply Selected ({selectedJobIds.size})</button>
+          <button className="button secondary" onClick={() => refresh(filter)} disabled={Boolean(busy)}>Refresh</button>
         </div>
       </header>
 
+      <section className="connections" aria-label="Platform connections">
+        <strong>Connections</strong>
+        {CONNECTION_PLATFORMS.map((platform) => {
+          const connection = connections.find((item) => item.platform === platform);
+          const connected = Boolean(connection?.connected);
+          const connecting = connection?.status === "connecting";
+          const label = `${platform[0].toUpperCase()}${platform.slice(1)}`;
+          return <div className="connection" key={platform} title={connection?.message || ""}>
+            <span>{label}</span>
+            {connected
+              ? <span className="connection-state connected">Connected</span>
+              : <button className="button secondary" disabled={Boolean(busy) || connecting} onClick={() => connectPlatform(platform)}>
+                  {connecting ? "Finish login" : busy === `connect-${platform}` ? "Opening..." : "Connect"}
+                </button>}
+          </div>;
+        })}
+      </section>
+
       <section className="summary" aria-label="Job summary">
         <div><span>Total Jobs</span><strong>{stats.total_jobs}</strong></div>
-        <div><span>Discovered</span><strong>{stats.discovered}</strong></div>
         <div><span>Qualified</span><strong>{stats.qualified}</strong></div>
-        <div><span>Ready</span><strong>{stats.ready_to_apply}</strong></div>
+        <div><span>Needs Review</span><strong>{stats.needs_review}</strong></div>
         <div><span>Applied</span><strong>{stats.applied}</strong></div>
-        <div><span>Interview</span><strong>{stats.interview}</strong></div>
       </section>
 
       <nav className="filters" aria-label="Filter jobs by status">
-        {FILTERS.map((item) => (
-          <button
-            key={item}
-            className={filter === item ? "filter active" : "filter"}
-            aria-pressed={filter === item}
-            onClick={() => selectFilter(item)}
-          >
-            {item === "ALL" ? "All" : formatStatus(item)}
-          </button>
-        ))}
+        {FILTERS.map((item) => <button key={item} className={filter === item ? "filter active" : "filter"} onClick={() => {
+          setFilter(item); setCurrentPage(1); setMessage("");
+        }}>{item === "ALL" ? "All" : formatStatus(item)}</button>)}
       </nav>
+
+      <section className="table-filters" aria-label="Filter jobs by score and location">
+        <label><span>Minimum score</span><select value={minimumScore} onChange={(event) => {
+          setMinimumScore(event.target.value); setCurrentPage(1);
+        }}>{SCORE_FILTERS.map((option) => <option key={option.label} value={option.value}>{option.label}</option>)}</select></label>
+        <label><span>Location</span><input type="search" value={locationFilter} placeholder="Bengaluru, Remote..." onChange={(event) => {
+          setLocationFilter(event.target.value); setCurrentPage(1);
+        }} /></label>
+        <button className="text-button clear-filters" disabled={!minimumScore && !locationFilter} onClick={() => {
+          setMinimumScore(""); setLocationFilter(""); setCurrentPage(1);
+        }}>Clear filters</button>
+      </section>
 
       {message && <p className="notice success" role="status">{message}</p>}
       {error && <p className="notice error" role="alert">{error}</p>}
 
       <section className="table-card" aria-label="Jobs">
-        <div className="table-scroll">
+        <div className="table-scroll" ref={tableViewportRef}>
           <table>
-            <thead>
-              <tr>
-                <th>Score</th>
-                <th>Company</th>
-                <th>Job Title</th>
-                <th>Location</th>
-                <th>Source</th>
-                <th>Status</th>
-                <th>Recommended Resume</th>
-                <th>Applied Date</th>
-                <th>Resume Used</th>
-                <th>Method</th>
-                <th>Application Link</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
+            <thead><tr><th className="select-column"><input type="checkbox" aria-label="Select all eligible jobs on this page" checked={allVisibleSelected} disabled={!selectableVisibleJobs.length} onChange={() => {
+              setSelectedJobIds((current) => {
+                const next = new Set(current);
+                selectableVisibleJobs.forEach((job) => allVisibleSelected ? next.delete(job.id) : next.add(job.id));
+                return next;
+              });
+            }} /></th><th>Score</th><th>Company</th><th>Job Title</th><th>Location</th><th>Work Type</th><th>Source</th><th>Status</th><th>Resume</th><th>Applied Date</th><th>Application Link</th></tr></thead>
             <tbody>
-              {jobs.map((job) => (
-                <tr key={job.id}>
-                  <td className="score">{job.match_score == null ? "-" : Math.round(job.match_score)}</td>
-                  <td>{job.company}</td>
-                  <td className="job-title">{job.title}</td>
-                  <td>{job.location || "-"}</td>
-                  <td className="source">{job.source}</td>
-                  <td><span className={`status status-${job.status.toLowerCase()}`}>{formatStatus(job.status)}</span></td>
-                  <td>{job.recommended_resume || "-"}</td>
-                  <td>{formatDate(job.applied_at)}</td>
-                  <td>{job.resume_used || "-"}</td>
-                  <td>{job.application_method ? formatStatus(job.application_method) : "-"}</td>
-                  <td>
-                    <a href={job.application_url} target="_blank" rel="noreferrer">Open Application Link</a>
-                  </td>
-                  <td>
-                    <div className="row-actions">
-                      {rowActions(job)}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {!jobs.length && !busy && (
-                <tr><td className="empty" colSpan="12">No jobs match this filter.</td></tr>
-              )}
-              {!jobs.length && busy && (
-                <tr><td className="empty" colSpan="12">Loading jobs...</td></tr>
-              )}
+              {visibleJobs.map((job) => <tr key={job.id}>
+                <td className="select-column"><input type="checkbox" aria-label={`Select ${job.title} at ${job.company}`} checked={selectedJobIds.has(job.id)} disabled={job.status !== "QUALIFIED" || job.application_status === "NEEDS_REVIEW" || Boolean(job.review_reason) || job.match_score == null || job.match_score <= 70 || !job.application_url} onChange={() => setSelectedJobIds((current) => {
+                  const next = new Set(current);
+                  next.has(job.id) ? next.delete(job.id) : next.add(job.id);
+                  return next;
+                })} /></td>
+                <td className="score" title={job.score_reason || ""}>{job.match_score == null ? "-" : Math.round(job.match_score)}</td>
+                <td>{job.company}</td><td className="job-title">{job.title}</td><td>{job.location || "-"}</td>
+                <td>{formatStatus(job.workplace_type || "UNKNOWN")}</td><td className="source">{job.source}</td>
+                <td>{(() => {
+                  const displayedStatus = job.application_status === "NEEDS_REVIEW" || job.review_reason
+                    ? "NEEDS_REVIEW"
+                    : job.status;
+                  return <span className={`status status-${displayedStatus.toLowerCase()}`} title={job.review_reason || ""}>{formatStatus(displayedStatus)}</span>;
+                })()}</td>
+                <td>{job.resume_used || job.recommended_resume || "-"}</td><td>{formatDate(job.applied_at)}</td>
+                <td><a href={job.application_url} target="_blank" rel="noreferrer">Open Application</a></td>
+              </tr>)}
+              {!filteredJobs.length && <tr><td className="empty" colSpan="11">No jobs match this filter.</td></tr>}
             </tbody>
           </table>
         </div>
+        {filteredJobs.length > 0 && <nav className="pagination" aria-label="Job table pagination">
+          <span>Showing {pageStart + 1}-{Math.min(pageStart + pageSize, filteredJobs.length)} of {filteredJobs.length}</span>
+          <div className="pagination-controls">
+            <label className="page-size">Rows <select value={pageSizeChoice} onChange={(event) => {
+              setPageSizeChoice(event.target.value); setCurrentPage(1);
+            }}><option value="AUTO">Auto ({autoPageSize})</option>{PAGE_SIZES.map((size) => <option key={size}>{size}</option>)}</select></label>
+            <button className="button secondary" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage === 1}>Previous</button>
+            <strong>Page {currentPage} of {totalPages}</strong>
+            <button className="button secondary" onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={currentPage === totalPages}>Next</button>
+          </div>
+        </nav>}
       </section>
-
-      {selectedJob && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={() => setSelectedJob(null)}>
-          <section className="job-modal" role="dialog" aria-modal="true" aria-labelledby="job-dialog-title" onMouseDown={(event) => event.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <p className="eyebrow">{selectedJob.company}</p>
-                <h2 id="job-dialog-title">{selectedJob.title}</h2>
-              </div>
-              <button className="close-button" aria-label="Close job details" onClick={() => setSelectedJob(null)}>×</button>
-            </div>
-            <dl className="job-meta">
-              <div><dt>Location</dt><dd>{selectedJob.location || "Not provided"}</dd></div>
-              <div><dt>Status</dt><dd>{formatStatus(selectedJob.status)}</dd></div>
-              <div><dt>Score</dt><dd>{selectedJob.match_score == null ? "Not scored" : Math.round(selectedJob.match_score)}</dd></div>
-            </dl>
-            <div className="description">{selectedJob.description || "No description was provided by this source."}</div>
-            <div className="modal-actions">
-              <a className="button link-button" href={selectedJob.application_url} target="_blank" rel="noreferrer">Open Application Link</a>
-            </div>
-          </section>
-        </div>
-      )}
-
-      {applicationJob && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={() => setApplicationJob(null)}>
-          <form className="apply-modal" role="dialog" aria-modal="true" aria-labelledby="apply-dialog-title" onSubmit={markApplied} onMouseDown={(event) => event.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <p className="eyebrow">{applicationJob.company}</p>
-                <h2 id="apply-dialog-title">Mark as applied</h2>
-              </div>
-              <button type="button" className="close-button" aria-label="Close application form" onClick={() => setApplicationJob(null)}>×</button>
-            </div>
-            <label className="form-field">
-              <span>Resume used</span>
-              <input value={resumeUsed} onChange={(event) => setResumeUsed(event.target.value)} placeholder="resumes/backend.pdf" required />
-            </label>
-            <label className="form-field">
-              <span>Application method</span>
-              <select value={applicationMethod} onChange={(event) => setApplicationMethod(event.target.value)}>
-                {APPLICATION_METHODS.map((method) => <option key={method} value={method}>{formatStatus(method)}</option>)}
-              </select>
-            </label>
-            <div className="modal-actions">
-              <button type="button" className="button secondary" onClick={() => setApplicationJob(null)}>Cancel</button>
-              <button type="submit" className="button" disabled={Boolean(busy)}>{busy ? "Saving..." : "Save Application"}</button>
-            </div>
-          </form>
-        </div>
-      )}
     </main>
   );
 }

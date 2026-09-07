@@ -1,4 +1,4 @@
-"""Lever application-plan adapter; no form submission."""
+"""Lever application adapter."""
 
 from urllib.parse import urlsplit
 

@@ -19,13 +19,19 @@ from job_automation.database import (
     DuplicateJobError,
     Job,
     JobRepository,
+    JobStatus,
     initialize_database,
 )
+from job_automation.matching.ranker import RankedJob, rank_jobs
 from job_automation.normalizer import NormalizedJob, normalize_job
+from job_automation.matching.ats_score import UserProfile
+from job_automation.matching.requirements import evaluate_hard_constraints
 from job_automation.scraper.base import BaseJobScraper
 from job_automation.scraper.company_careers import CareerPageSelectors, GenericCareerScraper
 from job_automation.scraper.greenhouse import GreenhouseScraper
 from job_automation.scraper.lever import LeverScraper
+from job_automation.scraper.linkedin import LinkedInScraper
+from job_automation.scraper.naukri import NaukriScraper
 from job_automation.scraper.workday import WorkdayScraper, WorkdaySiteConfig
 
 
@@ -84,6 +90,19 @@ class DiscoverySummary:
     new_jobs: int = 0
     duplicates: int = 0
     failed_sources: int = 0
+    remote_eligible: int = 0
+    bengaluru_hybrid: int = 0
+    bengaluru_onsite: int = 0
+    filtered: int = 0
+
+
+@dataclass(slots=True)
+class AutomationCycleSummary:
+    discovery: DiscoverySummary
+    jobs_scored: int = 0
+    ats_over_70: int = 0
+    successfully_applied: int = 0
+    failed: int = 0
 
 
 class UnsupportedSourceError(ValueError):
@@ -148,6 +167,25 @@ def build_scraper(source: SourceConfig) -> BaseJobScraper:
             site=source.options.get("site"),
             **common,
         )
+    if source.type == "linkedin":
+        return LinkedInScraper(
+            source.url,
+            queries=source.options.get("queries", ()),
+            searches=source.options.get("searches"),
+            date_posted_seconds=source.options.get("date_posted_seconds", 604800),
+            max_pages=int(source.options.get("max_pages", 1)),
+            page_size=int(source.options.get("page_size", 25)),
+            **common,
+        )
+    if source.type == "naukri":
+        return NaukriScraper(
+            source.url,
+            queries=source.options.get("queries", ()),
+            searches=source.options.get("searches"),
+            max_pages=int(source.options.get("max_pages", 1)),
+            browser_wait_ms=int(source.options.get("browser_wait_ms", 2500)),
+            **common,
+        )
     if source.type == "workday":
         scraper = WorkdayScraper(
             source.url,
@@ -183,10 +221,12 @@ class JobDiscoveryService:
         repository: JobRepository,
         *,
         scraper_factory: ScraperFactory = build_scraper,
+        profile: UserProfile | None = None,
         logger: logging.Logger | None = None,
     ) -> None:
         self.repository = repository
         self.scraper_factory = scraper_factory
+        self.profile = profile
         self.logger = logger or LOGGER
 
     @staticmethod
@@ -198,8 +238,14 @@ class JobDiscoveryService:
             "title": job.title,
             "company": job.company,
             "location": job.location,
+            "workplace_type": job.workplace_type,
             "description": job.description,
             "skills": job.skills or [],
+            "required_skills": job.required_skills or [],
+            "preferred_skills": job.preferred_skills or [],
+            "minimum_experience": job.minimum_experience,
+            "maximum_experience": job.maximum_experience,
+            "is_open": job.is_open,
             "source": job.source,
             "source_url": job.source_url,
             "application_url": job.application_url,
@@ -210,7 +256,18 @@ class JobDiscoveryService:
     @staticmethod
     def _changed_fields(existing: Job, values: Mapping[str, Any]) -> dict[str, Any]:
         changes: dict[str, Any] = {"scraped_at": values["scraped_at"]}
-        for field in ("location", "description", "skills", "posted_at"):
+        for field in (
+            "location",
+            "workplace_type",
+            "description",
+            "skills",
+            "required_skills",
+            "preferred_skills",
+            "minimum_experience",
+            "maximum_experience",
+            "is_open",
+            "posted_at",
+        ):
             incoming = values.get(field)
             if incoming not in (None, "", []) and getattr(existing, field) != incoming:
                 changes[field] = incoming
@@ -230,18 +287,33 @@ class JobDiscoveryService:
             )
             return
 
+        status = JobStatus.DISCOVERED
+        skip_reason: str | None = None
+        if self.profile is not None:
+            decision = evaluate_hard_constraints(job, target_titles=self.profile.target_titles)
+            if decision.eligible and decision.category:
+                setattr(summary, decision.category, getattr(summary, decision.category) + 1)
+            elif not decision.eligible:
+                status = JobStatus.SKIPPED
+                skip_reason = decision.reason
+                summary.filtered += 1
+
         duplicate = self.repository.find_duplicate(
             values["company"],
             values["title"],
             values["application_url"],
+            external_id=values["external_id"],
+            source=values["source"],
         )
         if duplicate is not None:
             summary.duplicates += 1
             changes = self._changed_fields(duplicate, values)
+            if duplicate.status is not JobStatus.APPLIED and status is JobStatus.SKIPPED:
+                changes.update(status=status, skip_reason=skip_reason)
             self.repository.update_job(duplicate.id, **changes)
             return
         try:
-            self.repository.create_job(**values)
+            self.repository.create_job(**values, status=status, skip_reason=skip_reason)
             summary.new_jobs += 1
         except DuplicateJobError:
             summary.duplicates += 1
@@ -275,10 +347,35 @@ class JobDiscoveryService:
                     else:
                         self.logger.warning("Ignoring non-job result from %s", source.url)
                         continue
+                    # A job returned by a successful live listing request is open at
+                    # discovery time unless the source explicitly says otherwise.
+                    if job.is_open is None:
+                        job = job.model_copy(update={"is_open": True})
                     self._save_job(job, summary)
                 except Exception:
                     self.logger.exception("Unable to process one job from %s", source.url)
         return summary
+
+
+async def run_complete_cycle(
+    repository: JobRepository,
+    sources: Sequence[SourceConfig],
+    profile: UserProfile,
+    active_resume_path: str,
+) -> tuple[AutomationCycleSummary, list[RankedJob]]:
+    """Run discovery and active-resume scoring; applications remain a separate action."""
+    discovery = await JobDiscoveryService(repository, profile=profile).run(sources)
+    ranked = rank_jobs(repository, profile, active_resume_path)
+    return (
+        AutomationCycleSummary(
+            discovery=discovery,
+            jobs_scored=len(ranked),
+            ats_over_70=sum(item.breakdown.total > 70 for item in ranked),
+            successfully_applied=0,
+            failed=discovery.failed_sources,
+        ),
+        ranked,
+    )
 
 
 def print_summary(summary: DiscoverySummary) -> None:
@@ -287,6 +384,24 @@ def print_summary(summary: DiscoverySummary) -> None:
     print(f"new jobs: {summary.new_jobs}")
     print(f"duplicates: {summary.duplicates}")
     print(f"failed sources: {summary.failed_sources}")
+    print(f"remote eligible: {summary.remote_eligible}")
+    print(f"Bengaluru hybrid: {summary.bengaluru_hybrid}")
+    print(f"Bengaluru onsite: {summary.bengaluru_onsite}")
+    print(f"filtered: {summary.filtered}")
+
+
+def print_cycle_summary(summary: AutomationCycleSummary) -> None:
+    discovery = summary.discovery
+    print(f"sources checked: {discovery.sources_checked}")
+    print(f"jobs discovered: {discovery.jobs_discovered}")
+    print(f"remote eligible: {discovery.remote_eligible}")
+    print(f"Bengaluru hybrid: {discovery.bengaluru_hybrid}")
+    print(f"Bengaluru onsite: {discovery.bengaluru_onsite}")
+    print(f"duplicates: {discovery.duplicates}")
+    print(f"jobs scored: {summary.jobs_scored}")
+    print(f"ATS > 70: {summary.ats_over_70}")
+    print(f"successfully applied: {summary.successfully_applied}")
+    print(f"failed: {summary.failed}")
 
 
 def parse_args() -> argparse.Namespace:
@@ -301,12 +416,18 @@ async def async_main(args: argparse.Namespace) -> int:
     sources = load_sources(args.config)
     engine = initialize_database(args.database_url)
     try:
-        service = JobDiscoveryService(JobRepository(engine))
-        summary = await service.run(sources)
+        repository = JobRepository(engine)
+        active = repository.get_active_resume()
+        if active is None:
+            raise ValueError("Upload an active resume before running discovery and scoring")
+        from job_automation.resume import ParsedCandidateProfile
+
+        profile = ParsedCandidateProfile.model_validate(active.parsed_profile).to_user_profile()
+        summary, _ = await run_complete_cycle(repository, sources, profile, active.path)
     finally:
         engine.dispose()
-    print_summary(summary)
-    return 1 if summary.failed_sources else 0
+    print_cycle_summary(summary)
+    return 1 if summary.failed else 0
 
 
 def main() -> int:
@@ -315,6 +436,7 @@ def main() -> int:
         level=getattr(logging, args.log_level.upper(), logging.INFO),
         format="%(levelname)s %(name)s: %(message)s",
     )
+    logging.getLogger("scrapling").propagate = False
     try:
         return asyncio.run(async_main(args))
     except ValueError as error:

@@ -4,11 +4,8 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
-import json
 import logging
-from pathlib import Path
-
-from pydantic import ValidationError
+from datetime import timezone
 
 from job_automation.database import (
     DEFAULT_DATABASE_URL,
@@ -18,18 +15,13 @@ from job_automation.database import (
     initialize_database,
 )
 from job_automation.matching.ats_score import ScoreBreakdown, UserProfile, score_job
+from job_automation.matching.requirements import evaluate_hard_constraints
 from job_automation.normalizer import NormalizedJob
-from job_automation.resume import ResumeSelector
 
 
 LOGGER = logging.getLogger(__name__)
-DEFAULT_PROFILE_PATH = Path(__file__).resolve().parents[2] / "config" / "profile.json"
 _PRESERVED_STATUSES = {
-    JobStatus.READY_TO_APPLY,
     JobStatus.APPLIED,
-    JobStatus.REJECTED,
-    JobStatus.INTERVIEW,
-    JobStatus.OFFER,
     JobStatus.SKIPPED,
 }
 
@@ -40,28 +32,20 @@ class RankedJob:
     breakdown: ScoreBreakdown
 
 
-def load_profile(path: str | Path = DEFAULT_PROFILE_PATH) -> UserProfile:
-    profile_path = Path(path)
-    try:
-        payload = json.loads(profile_path.read_text(encoding="utf-8"))
-    except FileNotFoundError as error:
-        raise ValueError(f"Profile configuration not found: {profile_path}") from error
-    except (OSError, json.JSONDecodeError) as error:
-        raise ValueError(f"Unable to read profile configuration {profile_path}: {error}") from error
-    try:
-        return UserProfile.model_validate(payload)
-    except ValidationError as error:
-        raise ValueError(f"Invalid profile configuration {profile_path}: {error}") from error
-
-
 def _normalized_job(job: Job) -> NormalizedJob:
     return NormalizedJob(
         external_id=job.external_id,
         title=job.title,
         company=job.company,
         location=job.location,
+        workplace_type=job.workplace_type,
         description=job.description,
         skills=job.skills,
+        required_skills=job.required_skills,
+        preferred_skills=job.preferred_skills,
+        minimum_experience=job.minimum_experience,
+        maximum_experience=job.maximum_experience,
+        is_open=job.is_open,
         source=job.source,
         source_url=job.source_url,
         application_url=job.application_url,
@@ -72,30 +56,59 @@ def _normalized_job(job: Job) -> NormalizedJob:
 def _status_for_score(job: Job, score: float) -> JobStatus:
     if job.status in _PRESERVED_STATUSES:
         return job.status
-    return JobStatus.QUALIFIED if score >= 80 else JobStatus.SCORED
+    return JobStatus.QUALIFIED if score > 70 else JobStatus.DISCOVERED
 
 
 def rank_jobs(
     repository: JobRepository,
     profile: UserProfile,
-    resume_selector: ResumeSelector | None = None,
+    active_resume_path: str | None = None,
 ) -> list[RankedJob]:
-    """Score every persisted job, update its score/status, and return best first."""
-    selector = resume_selector or ResumeSelector.from_file()
+    """Score DISCOVERED/QUALIFIED jobs while preserving APPLIED and SKIPPED rows."""
     ranked: list[RankedJob] = []
     for job in repository.get_jobs():
-        breakdown = score_job(_normalized_job(job), profile)
+        if job.status in _PRESERVED_STATUSES:
+            continue
+        normalized = _normalized_job(job)
+        eligibility = evaluate_hard_constraints(normalized, target_titles=profile.target_titles)
+        if not eligibility.eligible and job.status is not JobStatus.APPLIED:
+            repository.update_job(job.id, status=JobStatus.SKIPPED, skip_reason=eligibility.reason)
+            LOGGER.info("job_filtered job_id=%s reason=%s", job.id, eligibility.reason)
+            continue
+        breakdown = score_job(normalized, profile)
         status = _status_for_score(job, breakdown.total)
-        changes: dict[str, object] = {"match_score": breakdown.total, "status": status}
+        changes: dict[str, object] = {
+            "match_score": breakdown.total,
+            "matched_skills": list(breakdown.matched_skills),
+            "missing_skills": list(breakdown.missing_required_skills),
+            "score_reason": breakdown.reason,
+            "status": status,
+        }
         if status is JobStatus.QUALIFIED:
-            selection = selector.select(job)
-            changes["recommended_resume"] = selection.resume.path if selection else None
-        elif status is JobStatus.SCORED:
+            changes["recommended_resume"] = active_resume_path
+            changes["resume_match_reason"] = (
+                "Active uploaded resume used for ATS scoring" if active_resume_path else "No active resume"
+            )
+        else:
             changes["recommended_resume"] = None
+            changes["resume_match_reason"] = None
         updated = repository.update_job(job.id, **changes)
         if updated is not None:
             ranked.append(RankedJob(updated, breakdown))
-    return sorted(ranked, key=lambda item: (-item.breakdown.total, item.job.company.casefold(), item.job.title.casefold()))
+            LOGGER.info(
+                "score_calculated job_id=%s score=%.2f status=%s",
+                job.id,
+                breakdown.total,
+                updated.status.value,
+            )
+    def sort_key(item: RankedJob) -> tuple[float, float, str, str]:
+        posted = item.job.posted_at
+        if posted is not None and posted.tzinfo is None:
+            posted = posted.replace(tzinfo=timezone.utc)
+        posted_value = posted.timestamp() if posted is not None else 0.0
+        return (-item.breakdown.total, -posted_value, item.job.company.casefold(), item.job.title.casefold())
+
+    return sorted(ranked, key=sort_key)
 
 
 def print_rankings(ranked: list[RankedJob], *, limit: int = 20) -> None:
@@ -106,16 +119,16 @@ def print_rankings(ranked: list[RankedJob], *, limit: int = 20) -> None:
         print(f"{index:>2}. {score.total:>6.2f} | {item.job.company} | {item.job.title} | {location}")
         print(
             "    "
-            f"title={score.title:.1f}/30 skills={score.skills:.1f}/30 "
-            f"keywords={score.keywords:.1f}/15 location={score.location:.1f}/15 "
-            f"experience={score.experience:.1f}/10 penalty=-{score.excluded_penalty:.1f} "
+            f"title={score.title:.1f}/20 required={score.required_skills:.1f}/30 "
+            f"experience={score.experience:.1f}/15 frontend={score.frontend_fullstack_relevance:.1f}/10 "
+            f"preferred={score.preferred_skills:.1f}/10 domain={score.domain_relevance:.1f}/5 "
+            f"location={score.location:.1f}/10 penalty=-{score.excluded_penalty:.1f} "
             f"status={item.job.status.value}"
         )
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--profile", type=Path, default=DEFAULT_PROFILE_PATH)
     parser.add_argument("--database-url", default=DEFAULT_DATABASE_URL)
     parser.add_argument("--limit", type=int, default=20)
     parser.add_argument("--log-level", default="INFO")
@@ -132,13 +145,22 @@ def main() -> int:
         LOGGER.error("limit cannot be negative")
         return 2
     try:
-        profile = load_profile(args.profile)
         engine = initialize_database(args.database_url)
     except ValueError as error:
         LOGGER.error("%s", error)
         return 2
     try:
-        ranked = rank_jobs(JobRepository(engine), profile)
+        repository = JobRepository(engine)
+        active_resume = repository.get_active_resume()
+        if active_resume is None:
+            raise ValueError("Upload an active resume before scoring")
+        from job_automation.resume import ParsedCandidateProfile
+
+        profile = ParsedCandidateProfile.model_validate(active_resume.parsed_profile).to_user_profile()
+        ranked = rank_jobs(repository, profile, active_resume.path)
+    except ValueError as error:
+        LOGGER.error("%s", error)
+        return 2
     finally:
         engine.dispose()
     print_rankings(ranked, limit=args.limit)

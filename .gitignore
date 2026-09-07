@@ -105,6 +105,9 @@ coverage.xml
 # Complexity
 output/*.html
 output/*/index.html
+data/application_browser_profile/
+data/application_chrome_profile/
+data/auth/
 
 # Sphinx
 docs/_build

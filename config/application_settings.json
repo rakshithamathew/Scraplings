@@ -1,0 +1,11 @@
+{
+  "auto_apply_enabled": true,
+  "minimum_ats_score": 70,
+  "max_applications_per_run": 3,
+  "delay_between_applications_seconds": 10,
+  "headless": false,
+  "dry_run": false,
+  "navigation_timeout_seconds": 30,
+  "browser_profile_directory": "data/application_chrome_profile",
+  "browser_channel": "chrome"
+}

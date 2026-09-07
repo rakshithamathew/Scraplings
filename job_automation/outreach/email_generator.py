@@ -30,6 +30,7 @@ class EmailDraft(BaseModel):
 
     job_id: int
     contact_name: str
+    contact_role: str
     to_email: str
     subject: str
     body: str
@@ -75,6 +76,7 @@ def generate_email_draft(
     return EmailDraft(
         job_id=job.id,
         contact_name=candidate.name,
+        contact_role=candidate.title,
         to_email=candidate.email,
         subject=f"{subject_prefix}: {safe_title} at {safe_company}",
         body=body,

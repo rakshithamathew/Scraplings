@@ -37,6 +37,7 @@ class GmailDraftWorkflow:
         stored = repository.record_outreach_draft(
             draft.job_id,
             contact_name=draft.contact_name,
+            contact_role=draft.contact_role,
             contact_email=draft.to_email,
         )
         if stored is None:

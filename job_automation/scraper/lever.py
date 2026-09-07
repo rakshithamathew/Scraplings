@@ -121,12 +121,14 @@ class LeverScraper(BaseJobScraper):
             "location": raw.get("categories", {}).get("location")
             if isinstance(raw.get("categories"), Mapping)
             else None,
+            "workplace_type": raw.get("workplaceType") or raw.get("workplace_type"),
             "description": self._description(raw),
             "skills": None,
             "source": self.source,
             "source_url": raw.get("hostedUrl"),
             "application_url": raw.get("applyUrl"),
             "posted_at": raw.get("createdAt"),
+            "is_open": True,
         }
         return normalize_job(values, source=self.source, base_url=self.careers_url)
 

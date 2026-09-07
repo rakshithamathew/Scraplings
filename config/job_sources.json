@@ -4,15 +4,62 @@
       "type": "greenhouse",
       "company": "Greenhouse",
       "url": "https://job-boards.greenhouse.io/greenhouse",
-      "limit": 5,
+      "limit": 100,
       "request_delay": 0.5
     },
     {
       "type": "lever",
       "company": "Lever Demo",
       "url": "https://jobs.lever.co/leverdemo",
-      "limit": 5,
+      "limit": 100,
       "request_delay": 0.5
+    },
+    {
+      "type": "linkedin",
+      "company": null,
+      "url": "https://www.linkedin.com/jobs/search/",
+      "limit": 600,
+      "timeout": 30,
+      "request_delay": 2,
+      "options": {
+        "queries": [
+          "Frontend Developer",
+          "Angular Developer",
+          "React JS Developer",
+          "Software Developer",
+          "Software Engineer"
+        ],
+        "searches": [
+          {"location": "Bengaluru, Karnataka, India"},
+          {"location": "Worldwide", "remote": true}
+        ],
+        "date_posted_seconds": 604800,
+        "max_pages": 1,
+        "page_size": 25
+      }
+    },
+    {
+      "type": "naukri",
+      "company": null,
+      "url": "https://www.naukri.com/jobs-in-india",
+      "limit": 200,
+      "timeout": 35,
+      "request_delay": 3,
+      "options": {
+        "queries": [
+          "Frontend Developer",
+          "Angular Developer",
+          "React JS Developer",
+          "Software Developer",
+          "Software Engineer"
+        ],
+        "searches": [
+          {"location": "Bengaluru"},
+          {"location": "Remote", "remote": true}
+        ],
+        "max_pages": 1,
+        "browser_wait_ms": 2500
+      }
     }
   ]
 }

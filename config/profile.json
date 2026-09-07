@@ -1,34 +1,55 @@
 {
   "target_titles": [
-    "Software Engineer",
-    "Python Engineer",
-    "Backend Engineer",
-    "Data Engineer"
+    "Senior Frontend Developer", "Senior Frontend Engineer", "Frontend Developer",
+    "Frontend Engineer", "Senior React Developer", "Senior React Engineer",
+    "React Developer", "React Engineer", "UI Developer", "UI Engineer",
+    "Senior UI Developer", "Senior UI Engineer", "Web Application Developer",
+    "Senior Web Developer", "JavaScript Developer", "JavaScript Engineer",
+    "TypeScript Developer", "TypeScript Engineer", "Full Stack Developer",
+    "Full Stack Engineer", "Senior Full Stack Developer", "Senior Full Stack Engineer",
+    "MERN Stack Developer", "MERN Stack Engineer", "React Node Developer",
+    "React Node Engineer", "Technical Lead", "Tech Lead", "Frontend Lead",
+    "Frontend Technical Lead", "Lead Frontend Developer", "Lead Frontend Engineer",
+    "Lead UI Engineer", "Lead React Developer", "Lead React Engineer",
+    "Software Development Team Lead", "Software Engineer III", "Senior Software Engineer",
+    "Staff Frontend Engineer", "Staff Software Engineer", "Product Engineer",
+    "Senior Product Engineer", "Platform UI Engineer", "Dashboard Developer",
+    "Dashboard UI Engineer", "Clinical Dashboard Developer", "Clinical UI Developer",
+    "Healthcare Frontend Developer", "Healthcare Software Engineer",
+    "HealthTech Frontend Engineer", "Medical Software UI Developer",
+    "AI Product Engineer", "GenAI Frontend Engineer", "GenAI Full Stack Engineer",
+    "AI Application Developer", "LLM Application Engineer", "AI Full Stack Developer"
   ],
   "skills": [
-    "Python",
-    "SQL",
-    "Git",
-    "REST API"
+    "React.js", "Angular", "JavaScript", "TypeScript", "Redux", "Axios",
+    "Material UI", "Tailwind CSS", "Responsive Design", "Micro-frontends", "Cypress",
+    "Node.js", "Express.js", "REST APIs", "GraphQL", "SQL", "Python", "Azure",
+    "Docker", "Kubernetes", "Nginx", "GitHub", "CI/CD", "WebSockets", "HL7",
+    "FHIR", "Gemini", "GenAI", "OpenAI", "LLM", "OCR", "NLP", "RAG",
+    "Chart.js", "Snowflake", "Amplitude", "Webhooks", "CRM integrations",
+    "System Design"
+  ],
+  "preferred_skills": ["React.js", "Angular", "TypeScript", "Node.js", "GraphQL", "Azure"],
+  "frontend_fullstack_skills": [
+    "React.js", "Angular", "JavaScript", "TypeScript", "Redux", "Node.js",
+    "Express.js", "REST APIs", "GraphQL", "Micro-frontends"
+  ],
+  "domain_keywords": [
+    "healthcare", "clinical", "healthtech", "GenAI", "AI application", "SaaS",
+    "high-volume data", "product engineering"
   ],
   "preferred_locations": [
-    "Remote",
-    "India",
-    "Bengaluru",
-    "Hyderabad"
+    "Remote", "India", "Bengaluru", "Bangalore"
   ],
-  "minimum_experience": 0,
-  "maximum_experience": 8,
+  "minimum_experience": 5,
+  "maximum_experience": null,
   "keywords": [
-    "backend",
-    "automation",
-    "API",
-    "data"
+    "frontend", "full stack", "React", "Angular", "TypeScript", "product",
+    "healthcare", "clinical", "GenAI", "AI", "dashboard"
   ],
   "excluded_keywords": [
-    "director",
-    "principal",
-    "staff",
-    "manager"
+    "data scientist", "ML researcher", "DevOps-only", "SRE", "DBA",
+    "network engineer", "cybersecurity", "manual tester", "Android", "iOS",
+    "embedded", "firmware"
   ]
 }

@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any, Optional
 from unicodedata import normalize as unicode_normalize
 
-from sqlalchemy import Engine, Select, func, select
+from sqlalchemy import Engine, Select, func, or_, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from .models import ApplicationMethod, ApplicationStatus, Job, JobStatus, OutreachStatus, utc_now
+from .models import ActiveResume, ApplicationMethod, ApplicationStatus, Job, JobStatus, OutreachStatus, utc_now
 
 
 class DuplicateJobError(ValueError):
@@ -69,6 +69,7 @@ class JobRepository:
         *,
         status: Optional[JobStatus | str] = None,
         min_score: Optional[float] = None,
+        needs_review: bool = False,
         limit: Optional[int] = None,
         offset: int = 0,
     ) -> list[Job]:
@@ -78,8 +79,45 @@ class JobRepository:
             statement = statement.where(Job.status == self._coerce_status(status))
         if min_score is not None:
             statement = statement.where(Job.match_score >= min_score)
+        if needs_review:
+            statement = statement.where(
+                or_(
+                    Job.application_status == ApplicationStatus.NEEDS_REVIEW,
+                    Job.review_reason.is_not(None),
+                )
+            )
         if limit is not None:
             statement = statement.limit(limit)
+        with self._sessions() as session:
+            return list(session.scalars(statement))
+
+    def get_application_candidates(
+        self,
+        *,
+        minimum_score: float,
+        limit: int,
+        job_id: Optional[int] = None,
+        job_ids: Sequence[int] | None = None,
+    ) -> list[Job]:
+        """Return qualified jobs above the ATS threshold, highest score first."""
+        if job_id is not None and job_ids is not None:
+            raise ValueError("Pass either job_id or job_ids, not both")
+        statement = (
+            select(Job)
+            .where(
+                Job.status == JobStatus.QUALIFIED,
+                Job.match_score > minimum_score,
+            )
+            .order_by(Job.match_score.desc(), Job.posted_at.desc(), Job.id.desc())
+            .limit(limit)
+        )
+        if job_id is not None:
+            statement = statement.where(Job.id == job_id)
+        if job_ids is not None:
+            unique_ids = tuple(dict.fromkeys(job_ids))
+            if not unique_ids:
+                return []
+            statement = statement.where(Job.id.in_(unique_ids))
         with self._sessions() as session:
             return list(session.scalars(statement))
 
@@ -132,8 +170,14 @@ class JobRepository:
         resume_used: Optional[str],
         application_method: ApplicationMethod | str,
         applied_at: Any,
+        application_confirmation: Optional[str] = None,
+        external_application_id: Optional[str] = None,
     ) -> Optional[Job]:
-        """Record application metadata and atomically move a job to APPLIED."""
+        """Record APPLIED only when the caller supplies submission evidence."""
+        confirmation = (application_confirmation or "").strip() or None
+        external_id = (external_application_id or "").strip() or None
+        if confirmation is None and external_id is None:
+            raise ValueError("Submission evidence is required before marking a job APPLIED")
         return self.update_job(
             job_id,
             status=JobStatus.APPLIED,
@@ -141,7 +185,44 @@ class JobRepository:
             application_method=self._coerce_application_method(application_method).value,
             application_status=ApplicationStatus.APPLIED,
             applied_at=applied_at,
+            application_confirmation=confirmation,
+            external_application_id=external_id,
         )
+
+    def already_applied(self, job_id: int) -> bool:
+        """Check this job and any matching fingerprint for an applied record."""
+        job = self.get_job(job_id)
+        if job is None:
+            return False
+        if (
+            job.status is JobStatus.APPLIED
+            or job.application_status is ApplicationStatus.APPLIED
+            or job.applied_at is not None
+        ):
+            return True
+        with self._sessions() as session:
+            applied_jobs = session.scalars(
+                select(Job).where(
+                    (Job.status == JobStatus.APPLIED)
+                    | (Job.application_status == ApplicationStatus.APPLIED)
+                    | (Job.applied_at.is_not(None))
+                )
+            )
+            for applied in applied_jobs:
+                requisition_match = bool(
+                    job.external_id
+                    and applied.external_id == job.external_id
+                    and applied.source == job.source
+                )
+                identity_match = (
+                    normalize_identity_text(applied.company) == normalize_identity_text(job.company)
+                    and normalize_identity_text(applied.title) == normalize_identity_text(job.title)
+                    and normalize_application_url(applied.application_url)
+                    == normalize_application_url(job.application_url)
+                )
+                if requisition_match or identity_match:
+                    return True
+        return False
 
     def record_application_preparation(
         self,
@@ -151,11 +232,101 @@ class JobRepository:
         application_status: ApplicationStatus | str,
     ) -> Optional[Job]:
         """Persist a non-submitting application preparation result."""
+        application_state = self._coerce_application_status(application_status)
         return self.update_job(
             job_id,
+            status=JobStatus.QUALIFIED,
             application_method=self._coerce_application_method(application_method).value,
-            application_status=self._coerce_application_status(application_status),
+            application_status=application_state,
+            review_reason=(
+                "Application preparation requires user review"
+                if application_state is ApplicationStatus.NEEDS_REVIEW
+                else None
+            ),
+            failure_reason=None,
         )
+
+    def mark_application_needs_review(
+        self,
+        job_id: int,
+        reason: str,
+        *,
+        application_method: ApplicationMethod | str | None = None,
+    ) -> Optional[Job]:
+        changes: dict[str, Any] = {
+            "status": JobStatus.QUALIFIED,
+            "application_status": ApplicationStatus.NEEDS_REVIEW,
+            "review_reason": reason.strip(),
+            "failure_reason": None,
+        }
+        if application_method is not None:
+            changes["application_method"] = self._coerce_application_method(application_method).value
+        return self.update_job(job_id, **changes)
+
+    def mark_application_failed(
+        self,
+        job_id: int,
+        reason: str,
+        *,
+        application_method: ApplicationMethod | str | None = None,
+    ) -> Optional[Job]:
+        changes: dict[str, Any] = {
+            "status": JobStatus.QUALIFIED,
+            "application_status": None,
+            "failure_reason": reason.strip(),
+        }
+        if application_method is not None:
+            changes["application_method"] = self._coerce_application_method(application_method).value
+        return self.update_job(job_id, **changes)
+
+    def record_ready_to_submit(
+        self,
+        job_id: int,
+        *,
+        application_method: ApplicationMethod | str,
+        resume_used: str,
+    ) -> Optional[Job]:
+        """Record dry-run success without falsely claiming submission."""
+        return self.update_job(
+            job_id,
+            status=JobStatus.QUALIFIED,
+            application_status=None,
+            application_method=self._coerce_application_method(application_method).value,
+            resume_used=resume_used,
+            review_reason=None,
+            failure_reason=None,
+        )
+
+    def get_active_resume(self) -> Optional[ActiveResume]:
+        """Return the single active resume record, if one has been uploaded."""
+        with self._sessions() as session:
+            return session.scalar(select(ActiveResume).where(ActiveResume.active.is_(True)).limit(1))
+
+    def set_active_resume(
+        self,
+        *,
+        original_filename: str,
+        path: str,
+        content_type: str,
+        sha256: str,
+        parsed_profile: Mapping[str, Any],
+    ) -> ActiveResume:
+        """Create or replace the singleton active-resume metadata safely."""
+        with self._sessions.begin() as session:
+            instance = session.get(ActiveResume, 1)
+            if instance is None:
+                instance = ActiveResume(id=1)
+                session.add(instance)
+            instance.original_filename = original_filename
+            instance.path = path
+            instance.content_type = content_type
+            instance.sha256 = sha256
+            instance.parsed_profile = dict(parsed_profile)
+            instance.active = True
+            instance.uploaded_at = utc_now()
+            instance.updated_at = utc_now()
+            session.flush()
+        return instance
 
     def record_outreach_contact(
         self,
@@ -163,11 +334,13 @@ class JobRepository:
         *,
         contact_name: str,
         contact_email: str,
+        contact_role: Optional[str] = None,
     ) -> Optional[Job]:
         """Store one selected contact without sending any communication."""
         return self.update_job(
             job_id,
             contact_name=contact_name.strip(),
+            contact_role=(contact_role or "").strip() or None,
             contact_email=contact_email.strip(),
             outreach_status=OutreachStatus.CONTACT_FOUND,
         )
@@ -178,12 +351,23 @@ class JobRepository:
         *,
         contact_name: str,
         contact_email: str,
+        contact_role: Optional[str] = None,
     ) -> Optional[Job]:
         """Record that a reviewable draft exists; the draft is not sent."""
+        existing = self.get_job(job_id)
+        normalized_email = contact_email.strip().casefold()
+        if (
+            existing is not None
+            and (existing.contact_email or "").casefold() == normalized_email
+            and existing.outreach_status
+            in {OutreachStatus.DRAFTED, OutreachStatus.APPROVED, OutreachStatus.SENT, OutreachStatus.REPLIED}
+        ):
+            raise ValueError("Outreach already exists for this contact and job")
         return self.update_job(
             job_id,
             contact_name=contact_name.strip(),
-            contact_email=contact_email.strip(),
+            contact_role=(contact_role or "").strip() or None,
+            contact_email=normalized_email,
             outreach_status=OutreachStatus.DRAFTED,
         )
 
@@ -205,6 +389,17 @@ class JobRepository:
         """Return the total number of persisted jobs."""
         with self._sessions() as session:
             return int(session.scalar(select(func.count(Job.id))) or 0)
+
+    def count_needs_review(self) -> int:
+        """Count jobs paused at a human review or authorization checkpoint."""
+        statement = select(func.count(Job.id)).where(
+            or_(
+                Job.application_status == ApplicationStatus.NEEDS_REVIEW,
+                Job.review_reason.is_not(None),
+            )
+        )
+        with self._sessions() as session:
+            return int(session.scalar(statement) or 0)
 
     def job_exists(
         self,
@@ -236,9 +431,17 @@ class JobRepository:
         application_url: str,
         *,
         exclude_job_id: Optional[int] = None,
+        external_id: Optional[str] = None,
+        source: Optional[str] = None,
     ) -> Optional[Job]:
-        """Find a job by normalized company, normalized title, and application URL."""
+        """Find a job using requisition identity first, then canonical URL identity."""
         with self._sessions() as session:
+            if external_id and source:
+                statement = select(Job).where(Job.external_id == external_id, Job.source == source)
+                if exclude_job_id is not None:
+                    statement = statement.where(Job.id != exclude_job_id)
+                if match := session.scalar(statement.limit(1)):
+                    return match
             return self._find_duplicate_in_session(
                 session,
                 company=company,

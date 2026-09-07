@@ -17,6 +17,8 @@ from job_automation.database import (
     ApplicationStatus,
     Job,
     JobRepository,
+    JobStatus,
+    WorkplaceType,
     initialize_database,
 )
 
@@ -38,6 +40,11 @@ def _job(**overrides: object) -> Job:
         "source_url": "https://boards.greenhouse.io/example/jobs/42",
         "application_url": "https://boards.greenhouse.io/example/jobs/42",
         "recommended_resume": "resumes/software.pdf",
+        "match_score": 85,
+        "status": JobStatus.QUALIFIED,
+        "is_open": True,
+        "workplace_type": WorkplaceType.REMOTE,
+        "location": "Remote worldwide",
     }
     values.update(overrides)
     return Job(**values)
@@ -109,6 +116,26 @@ def test_missing_resume_requires_review(project_root: Path) -> None:
     assert agent.validate_application(plan).valid is False
 
 
+@pytest.mark.parametrize(
+    ("changes", "warning"),
+    [
+        ({"match_score": 70}, "greater than 70"),
+        ({"is_open": None}, "still open"),
+        ({"description": "A coding assessment is mandatory."}, "assessment"),
+        ({"location": "Hyderabad", "workplace_type": WorkplaceType.ONSITE}, "Bengaluru"),
+    ],
+)
+def test_pre_application_gate_requires_review(
+    project_root: Path,
+    changes: dict[str, object],
+    warning: str,
+) -> None:
+    plan = GreenhouseApplicationAgent(project_root=project_root).prepare_application(_job(**changes))
+
+    assert plan.application_status is ApplicationStatus.NEEDS_REVIEW
+    assert any(warning.casefold() in item.casefold() for item in plan.warnings)
+
+
 def test_submission_is_always_disabled(project_root: Path) -> None:
     agent = BrowserApplicationAgent(project_root=project_root)
     plan = agent.prepare_application(
@@ -136,6 +163,11 @@ def test_plan_storage_uses_repository(project_root: Path, tmp_path: Path) -> Non
             source_url="https://boards.greenhouse.io/example/jobs/42",
             application_url="https://boards.greenhouse.io/example/jobs/42",
             recommended_resume="resumes/software.pdf",
+            match_score=85,
+            status=JobStatus.QUALIFIED,
+            is_open=True,
+            workplace_type=WorkplaceType.REMOTE,
+            location="Remote worldwide",
         )
         plan = GreenhouseApplicationAgent(project_root=project_root).prepare_application(job)
 
@@ -144,6 +176,7 @@ def test_plan_storage_uses_repository(project_root: Path, tmp_path: Path) -> Non
         assert stored is not None
         assert stored.application_method == "GREENHOUSE"
         assert stored.application_status is ApplicationStatus.PREPARED
+        assert stored.status is JobStatus.QUALIFIED
     finally:
         engine.dispose()
 

@@ -1,8 +1,14 @@
-"""Workday application-plan adapter; no login or form submission."""
+"""Workday application adapter with mandatory login review."""
 
 from urllib.parse import urlsplit
 
-from job_automation.applications.base import ApplicationField, ApplicationJob, BaseApplicationAgent, COMMON_FIELDS
+from job_automation.applications.base import (
+    ApplicationField,
+    ApplicationJob,
+    ApplicationNeedsReviewError,
+    BaseApplicationAgent,
+    COMMON_FIELDS,
+)
 from job_automation.database import ApplicationMethod
 
 
@@ -30,3 +36,15 @@ class WorkdayApplicationAgent(BaseApplicationAgent):
                 notes="Must be reviewed manually; Workday variants differ by company.",
             ),
         )
+
+    async def open_application(self, job: ApplicationJob) -> bool:
+        opened = await super().open_application(job)
+        apply_controls = self.page.locator('[data-automation-id="jobPostingApplyButton"]')
+        if await apply_controls.count():
+            await apply_controls.first.click(timeout=self.navigation_timeout_ms)
+            await self.page.wait_for_timeout(500)
+        password_fields = await self.page.locator('input[type="password"]').count()
+        body = (await self.page.locator("body").inner_text()).casefold()
+        if password_fields or "sign in to apply" in body or "create an account" in body:
+            raise ApplicationNeedsReviewError("Workday login or account approval requires user review")
+        return opened

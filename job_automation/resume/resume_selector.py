@@ -15,7 +15,6 @@ from job_automation.matching.requirements import matched_terms, normalize_for_ma
 LOGGER = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RESUME_CONFIG_PATH = PROJECT_ROOT / "config" / "resumes.json"
-DEFAULT_RESUME_DIRECTORY = PROJECT_ROOT / "resumes"
 
 
 class JobLike(Protocol):

@@ -1,21 +1,41 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from io import BytesIO
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from docx import Document
 
 from job_automation.api.main import create_app
-from job_automation.database import JobRepository, JobStatus
+from job_automation.applications.service import ApplicationCycleSummary
+from job_automation.auth import ConnectionState
+from job_automation.database import JobRepository, JobStatus, WorkplaceType
 from job_automation.matching import UserProfile
 from job_automation.scraper.service import DiscoverySummary
+from job_automation.resume import ParsedCandidateProfile
 
 
 @pytest.fixture
 def api(tmp_path: Path) -> tuple[TestClient, JobRepository, dict[str, int]]:
-    app = create_app(f"sqlite:///{(tmp_path / 'api.db').as_posix()}")
+    (tmp_path / "resumes").mkdir()
+    (tmp_path / "resumes" / "fullstack_resume.pdf").touch()
+    app = create_app(f"sqlite:///{(tmp_path / 'api.db').as_posix()}", project_root=tmp_path)
     repository: JobRepository = app.state.repository
+    repository.set_active_resume(
+        original_filename="fullstack_resume.pdf",
+        path="resumes/fullstack_resume.pdf",
+        content_type="application/pdf",
+        sha256="a" * 64,
+        parsed_profile=ParsedCandidateProfile(
+            job_titles=["Python Engineer"],
+            skills=["Python"],
+            technologies=["Python"],
+            years_of_experience=3,
+            keywords=["backend", "API"],
+        ).model_dump(),
+    )
     first = repository.create_job(
         title="Python Engineer",
         company="Example",
@@ -27,6 +47,8 @@ def api(tmp_path: Path) -> tuple[TestClient, JobRepository, dict[str, int]]:
         match_score=85,
         status=JobStatus.QUALIFIED,
         recommended_resume="resumes/fullstack_resume.pdf",
+        workplace_type=WorkplaceType.REMOTE,
+        is_open=True,
     )
     second = repository.create_job(
         title="Data Analyst",
@@ -38,6 +60,8 @@ def api(tmp_path: Path) -> tuple[TestClient, JobRepository, dict[str, int]]:
         application_url="https://example.test/jobs/2",
         match_score=55,
         status=JobStatus.DISCOVERED,
+        workplace_type=WorkplaceType.ONSITE,
+        is_open=True,
     )
     with TestClient(app) as client:
         yield client, repository, {"first": first.id, "second": second.id}
@@ -74,17 +98,14 @@ def test_get_job_and_missing_job(api: tuple[TestClient, JobRepository, dict[str,
 
 def test_patch_status(api: tuple[TestClient, JobRepository, dict[str, int]]) -> None:
     client, repository, ids = api
-    response = client.patch(f"/jobs/{ids['second']}/status", json={"status": "READY_TO_APPLY"})
-
-    assert response.status_code == 200
-    assert response.json()["status"] == "READY_TO_APPLY"
-    assert repository.get_job(ids["second"]).status is JobStatus.READY_TO_APPLY  # type: ignore[union-attr]
-
     response = client.patch(f"/jobs/{ids['second']}/status", json={"status": "SKIPPED"})
 
     assert response.status_code == 200
     assert response.json()["status"] == "SKIPPED"
     assert repository.get_job(ids["second"]).status is JobStatus.SKIPPED  # type: ignore[union-attr]
+
+    direct_applied = client.patch(f"/jobs/{ids['second']}/status", json={"status": "APPLIED"})
+    assert direct_applied.status_code == 400
 
 
 def test_mark_applied(api: tuple[TestClient, JobRepository, dict[str, int]]) -> None:
@@ -93,27 +114,50 @@ def test_mark_applied(api: tuple[TestClient, JobRepository, dict[str, int]]) -> 
     response = client.post(
         f"/jobs/{ids['first']}/mark-applied",
         json={
-            "resume_used": "resumes/backend.pdf",
+            "resume_used": "resumes/fullstack_resume.pdf",
             "application_method": "MANUAL",
             "applied_at": applied_at,
+            "application_confirmation": "Confirmation page displayed after submission",
         },
     )
 
     assert response.status_code == 200
     assert response.json()["status"] == "APPLIED"
-    assert response.json()["resume_used"] == "resumes/backend.pdf"
+    assert response.json()["resume_used"] == "resumes/fullstack_resume.pdf"
     stored = repository.get_job(ids["first"])
     assert stored is not None
     assert stored.status is JobStatus.APPLIED
     assert stored.application_method == "MANUAL"
     assert stored.application_status.value == "APPLIED"
     assert stored.applied_at is not None
+    assert stored.application_confirmation is not None
+
+    assert client.post(
+        f"/jobs/{ids['first']}/mark-applied",
+        json={
+            "resume_used": "resumes/fullstack_resume.pdf",
+            "application_method": "MANUAL",
+            "application_confirmation": "duplicate",
+        },
+    ).status_code == 409
 
     invalid = client.post(
         f"/jobs/{ids['second']}/mark-applied",
         json={"resume_used": "resume.pdf", "application_method": "AUTOMATIC"},
     )
     assert invalid.status_code == 422
+
+    blank_resume = client.post(
+        f"/jobs/{ids['second']}/mark-applied",
+        json={"resume_used": "   ", "application_method": "MANUAL"},
+    )
+    assert blank_resume.status_code == 422
+
+    no_evidence = client.post(
+        f"/jobs/{ids['second']}/mark-applied",
+        json={"resume_used": "resumes/fullstack_resume.pdf", "application_method": "MANUAL"},
+    )
+    assert no_evidence.status_code == 422
 
 
 def test_stats(api: tuple[TestClient, JobRepository, dict[str, int]]) -> None:
@@ -123,14 +167,27 @@ def test_stats(api: tuple[TestClient, JobRepository, dict[str, int]]) -> None:
     assert response.status_code == 200
     assert response.json() == {
         "total_jobs": 2,
-        "discovered": 1,
         "qualified": 1,
-        "ready_to_apply": 0,
         "applied": 0,
-        "interview": 0,
-        "rejected": 0,
-        "offer": 0,
+        "needs_review": 0,
     }
+
+
+def test_needs_review_is_counted_and_filterable(
+    api: tuple[TestClient, JobRepository, dict[str, int]],
+) -> None:
+    client, repository, ids = api
+    repository.mark_application_needs_review(ids["first"], "Complete platform login")
+
+    stats = client.get("/stats")
+    filtered = client.get("/jobs", params={"needs_review": "true"})
+
+    assert stats.status_code == 200
+    assert stats.json()["needs_review"] == 1
+    assert filtered.status_code == 200
+    assert [job["id"] for job in filtered.json()] == [ids["first"]]
+    assert filtered.json()[0]["application_status"] == "NEEDS_REVIEW"
+    assert filtered.json()[0]["review_reason"] == "Complete platform login"
 
 
 def test_scrape_endpoint_uses_discovery_service(
@@ -139,8 +196,9 @@ def test_scrape_endpoint_uses_discovery_service(
     client, repository, _ = api
 
     class FakeDiscoveryService:
-        def __init__(self, received_repository: JobRepository) -> None:
+        def __init__(self, received_repository: JobRepository, profile: UserProfile) -> None:
             assert received_repository is repository
+            assert "Python" in profile.skills
 
         async def run(self, sources: object) -> DiscoverySummary:
             assert sources == ["configured-source"]
@@ -157,26 +215,22 @@ def test_scrape_endpoint_uses_discovery_service(
         "new_jobs": 2,
         "duplicates": 2,
         "failed_sources": 0,
+        "remote_eligible": 0,
+        "bengaluru_hybrid": 0,
+        "bengaluru_onsite": 0,
+        "filtered": 0,
+        "jobs_scored": 1,
+        "qualified": 1,
     }
 
 
 def test_score_endpoint_updates_database(api: tuple[TestClient, JobRepository, dict[str, int]]) -> None:
     client, repository, ids = api
-    client.app.state.profile_loader = lambda: UserProfile(  # type: ignore[attr-defined]
-        target_titles=["Python Engineer"],
-        skills=["Python"],
-        preferred_locations=["Remote"],
-        minimum_experience=1,
-        maximum_experience=5,
-        keywords=["backend", "API"],
-        excluded_keywords=[],
-    )
-
     response = client.post("/score")
 
     assert response.status_code == 200
-    assert response.json()["jobs_scored"] == 2
-    assert repository.get_job(ids["first"]).match_score == 100  # type: ignore[union-attr]
+    assert response.json()["jobs_scored"] == 1
+    assert repository.get_job(ids["first"]).match_score > 70  # type: ignore[union-attr]
     assert repository.get_job(ids["first"]).status is JobStatus.QUALIFIED  # type: ignore[union-attr]
 
 
@@ -202,3 +256,110 @@ def test_cors_allows_only_local_frontend(
     assert allowed.status_code == 200
     assert allowed.headers["access-control-allow-origin"] == "http://localhost:5173"
     assert blocked.status_code == 400
+
+
+def test_application_endpoints_use_shared_service(
+    api: tuple[TestClient, JobRepository, dict[str, int]],
+) -> None:
+    client, repository, ids = api
+
+    class FakeApplicationService:
+        def __init__(self) -> None:
+            self.received: list[tuple[int | None, list[int] | None]] = []
+
+        async def run_application_cycle(
+            self, *, job_id: int | None = None, job_ids: list[int] | None = None
+        ) -> ApplicationCycleSummary:
+            self.received.append((job_id, job_ids))
+            now = datetime.now(timezone.utc)
+            return ApplicationCycleSummary(
+                eligible=1,
+                attempted=1,
+                dry_run=True,
+                started_at=now,
+                completed_at=now,
+            )
+
+        def status(self) -> dict[str, object]:
+            return {
+                "running": False,
+                "dry_run": True,
+                "auto_apply_enabled": True,
+                "last_run": None,
+            }
+
+    fake = FakeApplicationService()
+    client.app.state.application_service = fake  # type: ignore[attr-defined]
+
+    batch = client.post("/applications/run", json={"job_ids": [ids["first"]]})
+    single = client.post(f"/applications/{ids['first']}/apply")
+    status = client.get("/applications/status")
+
+    assert batch.status_code == 200
+    assert batch.json()["attempted"] == 1
+    assert single.status_code == 200
+    assert fake.received == [(None, [ids["first"]]), (ids["first"], None)]
+    assert status.json()["dry_run"] is True
+    assert repository.count_jobs() == 2
+    assert client.post("/applications/999999/apply").status_code == 404
+
+
+def test_connection_endpoints_use_session_manager(
+    api: tuple[TestClient, JobRepository, dict[str, int]],
+) -> None:
+    client, _, _ = api
+
+    class FakeSessionManager:
+        def list_connections(self) -> list[ConnectionState]:
+            return [ConnectionState("linkedin", "disconnected", False, "Connect")]
+
+        def connect(self, platform: str) -> ConnectionState:
+            assert platform == "linkedin"
+            return ConnectionState(platform, "connecting", False, "Finish login")
+
+        def clear_session(self, platform: str) -> None:
+            assert platform == "linkedin"
+
+    client.app.state.session_manager = FakeSessionManager()  # type: ignore[attr-defined]
+
+    listed = client.get("/connections")
+    started = client.post("/connections/linkedin/connect")
+    cleared = client.delete("/connections/linkedin")
+
+    assert listed.status_code == 200
+    assert listed.json()[0]["connected"] is False
+    assert started.status_code == 200
+    assert started.json()["status"] == "connecting"
+    assert cleared.status_code == 204
+
+
+def test_resume_upload_parses_and_activates_docx(
+    api: tuple[TestClient, JobRepository, dict[str, int]],
+) -> None:
+    client, repository, _ = api
+    document = Document()
+    document.add_paragraph("Technical Skills")
+    document.add_paragraph("React, TypeScript")
+    document.add_paragraph("Work Experience")
+    document.add_paragraph("Frontend Developer")
+    document.add_paragraph("5 years of experience in healthcare software")
+    stream = BytesIO()
+    document.save(stream)
+
+    response = client.post(
+        "/resume/upload",
+        files={
+            "file": (
+                "rakshitha_resume.docx",
+                stream.getvalue(),
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["filename"] == "rakshitha_resume.docx"
+    assert response.json()["status"] == "Active"
+    assert "React" in response.json()["skills"]
+    assert client.get("/resume").json()["filename"] == "rakshitha_resume.docx"
+    assert repository.get_active_resume().original_filename == "rakshitha_resume.docx"  # type: ignore[union-attr]

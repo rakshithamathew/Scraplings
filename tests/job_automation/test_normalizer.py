@@ -7,6 +7,7 @@ from job_automation.normalizer import (
     normalize_job,
     normalize_location,
     normalize_title,
+    WorkplaceType,
 )
 
 
@@ -37,8 +38,14 @@ def test_normalize_greenhouse_record_with_missing_fields() -> None:
         "title",
         "company",
         "location",
+        "workplace_type",
         "description",
         "skills",
+        "required_skills",
+        "preferred_skills",
+        "minimum_experience",
+        "maximum_experience",
+        "is_open",
         "source",
         "source_url",
         "application_url",
@@ -89,6 +96,7 @@ def test_normalize_workday_partial_record_and_stable_fingerprint() -> None:
 
     assert job.external_id == "REQ-9"
     assert job.location == "London, Remote"
+    assert job.workplace_type is WorkplaceType.REMOTE
     assert job.description is None
     assert job.skills == ["Python", "Kubernetes", "SQL"]
     assert job.source_url == "https://careers.example.com/careers/job/REQ-9"
@@ -114,8 +122,14 @@ def test_normalization_helpers_tolerate_nulls() -> None:
         "title": None,
         "company": None,
         "location": None,
+        "workplace_type": WorkplaceType.UNKNOWN,
         "description": None,
         "skills": None,
+        "required_skills": None,
+        "preferred_skills": None,
+        "minimum_experience": None,
+        "maximum_experience": None,
+        "is_open": None,
         "source": None,
         "source_url": None,
         "application_url": None,

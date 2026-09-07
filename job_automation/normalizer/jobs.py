@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from datetime import date, datetime, time, timezone
 from hashlib import sha256
+from enum import Enum
 import re
 from typing import Any
 from unicodedata import normalize as unicode_normalize
@@ -15,6 +16,13 @@ from pydantic import BaseModel, ConfigDict, field_validator
 
 _WHITESPACE = re.compile(r"\s+")
 _COMMA_SPACING = re.compile(r"\s*,\s*")
+
+
+class WorkplaceType(str, Enum):
+    REMOTE = "REMOTE"
+    HYBRID = "HYBRID"
+    ONSITE = "ONSITE"
+    UNKNOWN = "UNKNOWN"
 
 
 def _clean_text(value: Any) -> str | None:
@@ -54,6 +62,23 @@ def normalize_location(value: Any) -> str | None:
 
     cleaned = _clean_text(value)
     return _COMMA_SPACING.sub(", ", cleaned) if cleaned else None
+
+
+def normalize_workplace_type(value: Any, *, location: Any = None) -> WorkplaceType:
+    """Normalize explicit work-mode text, falling back only to clear location wording."""
+    text = _clean_text(value) or _clean_text(location) or ""
+    normalized = text.casefold().replace("-", " ")
+    if "hybrid" in normalized:
+        return WorkplaceType.HYBRID
+    if any(term in normalized for term in ("remote", "work from anywhere", "distributed")):
+        return WorkplaceType.REMOTE
+    if any(term in normalized for term in ("on site", "onsite", "in office")):
+        return WorkplaceType.ONSITE
+    # A concrete location with no remote/hybrid marker is treated as onsite;
+    # empty or unavailable locations remain UNKNOWN and require review.
+    if _clean_text(location):
+        return WorkplaceType.ONSITE
+    return WorkplaceType.UNKNOWN
 
 
 def _normalize_url(value: Any, *, base_url: str | None = None) -> str | None:
@@ -134,8 +159,14 @@ class NormalizedJob(BaseModel):
     title: str | None = None
     company: str | None = None
     location: str | None = None
+    workplace_type: WorkplaceType = WorkplaceType.UNKNOWN
     description: str | None = None
     skills: list[str] | None = None
+    required_skills: list[str] | None = None
+    preferred_skills: list[str] | None = None
+    minimum_experience: int | None = None
+    maximum_experience: int | None = None
+    is_open: bool | None = None
     source: str | None = None
     source_url: str | None = None
     application_url: str | None = None
@@ -171,6 +202,11 @@ class NormalizedJob(BaseModel):
     def clean_skills(cls, value: Any) -> list[str] | None:
         return _normalize_skills(value)
 
+    @field_validator("required_skills", "preferred_skills", mode="before")
+    @classmethod
+    def clean_requirement_skills(cls, value: Any) -> list[str] | None:
+        return _normalize_skills(value)
+
     @field_validator("posted_at", mode="before")
     @classmethod
     def clean_posted_at(cls, value: Any) -> datetime | None:
@@ -182,8 +218,14 @@ _FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "title": ("title", "text", "job_title", "jobTitle"),
     "company": ("company", "company_name", "companyName", "organization"),
     "location": ("location", "location_name", "locationsText", "workplace_location"),
+    "workplace_type": ("workplace_type", "workplaceType", "workplace", "work_type", "workType"),
     "description": ("description", "descriptionPlain", "job_description", "jobDescription", "content"),
     "skills": ("skills", "skill_list", "skillList"),
+    "required_skills": ("required_skills", "requiredSkills", "must_have_skills"),
+    "preferred_skills": ("preferred_skills", "preferredSkills", "nice_to_have_skills"),
+    "minimum_experience": ("minimum_experience", "minimumExperience", "min_experience"),
+    "maximum_experience": ("maximum_experience", "maximumExperience", "max_experience"),
+    "is_open": ("is_open", "isOpen", "active"),
     "source": ("source",),
     "source_url": ("source_url", "sourceUrl", "absolute_url", "hostedUrl", "hosted_url", "url", "externalPath"),
     "application_url": ("application_url", "applicationUrl", "applyUrl", "apply_url"),
@@ -213,6 +255,10 @@ def normalize_job(
         values["location"] = categories.get("location") or categories.get("allLocations")
     if source is not None:
         values["source"] = source
+    values["workplace_type"] = normalize_workplace_type(
+        values["workplace_type"],
+        location=normalize_location(values["location"]),
+    )
     if base_url:
         values["source_url"] = _normalize_url(values["source_url"], base_url=base_url)
         values["application_url"] = _normalize_url(values["application_url"], base_url=base_url)
@@ -221,13 +267,16 @@ def normalize_job(
 
 
 def generate_job_fingerprint(job: NormalizedJob | Mapping[str, Any] | None) -> str:
-    """Hash the normalized company, title, and application URL identity triple."""
+    """Hash the strongest stable identity available without relying on missing fields."""
     normalized = job if isinstance(job, NormalizedJob) else normalize_job(job)
-    identity = "\x1f".join(
-        (
-            (normalize_company(normalized.company) or "").casefold(),
-            (normalize_title(normalized.title) or "").casefold(),
-            _normalize_url(normalized.application_url) or "",
-        )
-    )
+    company = (normalize_company(normalized.company) or "").casefold()
+    title = (normalize_title(normalized.title) or "").casefold()
+    application_url = _normalize_url(normalized.application_url) or ""
+    if application_url:
+        parts = ("url", company, title, application_url)
+    elif normalized.external_id:
+        parts = ("requisition", normalized.source or "", normalized.external_id.casefold(), company)
+    else:
+        parts = ("fallback", company, title, (normalize_location(normalized.location) or "").casefold())
+    identity = "\x1f".join(parts)
     return sha256(identity.encode("utf-8")).hexdigest()

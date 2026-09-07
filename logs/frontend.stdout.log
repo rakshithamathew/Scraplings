@@ -1,0 +1,9 @@
+
+> job-automation-frontend@0.1.0 dev
+> vite --host 127.0.0.1 --port 5173
+
+Port 5173 is in use, trying another one...
+
+  VITE v7.3.6  ready in 666 ms
+
+  ➜  Local:   http://127.0.0.1:5174/

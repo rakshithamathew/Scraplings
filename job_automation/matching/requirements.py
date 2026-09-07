@@ -6,6 +6,9 @@ from dataclasses import dataclass
 import re
 from typing import Iterable
 from unicodedata import normalize as unicode_normalize
+from urllib.parse import urlsplit
+
+from job_automation.normalizer import NormalizedJob, WorkplaceType
 
 
 _WHITESPACE = re.compile(r"\s+")
@@ -17,6 +20,46 @@ _MINIMUM = re.compile(
 _PLUS = re.compile(r"\b(\d{1,2})\s*\+\s*years?\b", re.I)
 _UP_TO = re.compile(r"\b(?:up\s+to|maximum(?:\s+of)?|max(?:imum)?\.?)\s*(\d{1,2})\s*years?\b", re.I)
 _PLAIN = re.compile(r"\b(\d{1,2})\s+years?\s+(?:of\s+)?(?:relevant\s+)?experience\b", re.I)
+_BENGALURU = re.compile(r"\b(?:bengaluru|bangalore)(?:\s+urban)?\b", re.I)
+_INTERNATIONAL = re.compile(
+    r"\b(?:worldwide|global|work\s+from\s+anywhere|international candidates?|"
+    r"candidates?\s+worldwide|visa sponsorship|relocation support|remote[^.]{0,30}india)\b",
+    re.I,
+)
+_REMOTE_EXCLUSIONS = (
+    re.compile(r"\b(?:remote\s*[-,/()]?\s*)?(?:us|u\.s\.|usa|united states)\s+only\b", re.I),
+    re.compile(r"\b(?:must be|be)\s+(?:located|based|resident)\s+in\s+(?:the\s+)?(?:us|usa|united states)\b", re.I),
+    re.compile(r"\bcanada\s+only\b", re.I),
+    re.compile(r"\b(?:eu|european union)\s+(?:residents?\s+)?only\b", re.I),
+    re.compile(r"\b(?:uk|united kingdom)\s+only\b", re.I),
+    re.compile(r"\bremote\s+(?:in|within|[-,/])\s*(?:us|usa|united states|canada|uk|eu)\b", re.I),
+)
+_REMOTE_LOCATION_EXCLUSIONS = re.compile(
+    r"\b(?:united states|u\.s\.|usa|canada|united kingdom|uk|europe|european union|eu|"
+    r"emea|latin america|latam|australia|new zealand)\b",
+    re.I,
+)
+_AVOID_TITLE_PATTERNS = (
+    "data scientist",
+    "machine learning researcher",
+    "ml researcher",
+    "machine learning engineer",
+    "ml engineer",
+    "devops engineer",
+    "site reliability engineer",
+    "cloud engineer",
+    "database administrator",
+    "network engineer",
+    "security engineer",
+    "cybersecurity",
+    "qa engineer",
+    "quality assurance",
+    "manual tester",
+    "android developer",
+    "ios developer",
+    "embedded",
+    "firmware",
+)
 
 
 def normalize_for_matching(value: str | None) -> str:
@@ -51,6 +94,13 @@ def matched_terms(terms: Iterable[str], text: str) -> tuple[str, ...]:
 class ExperienceRequirement:
     minimum: int | None = None
     maximum: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class HardFilterResult:
+    eligible: bool
+    category: str | None = None
+    reason: str | None = None
 
 
 def extract_experience_requirement(text: str | None) -> ExperienceRequirement | None:
@@ -90,3 +140,98 @@ def experience_compatibility(
         return 1.0
     gap = job_low - profile_high if job_low > profile_high else profile_low - job_high
     return 0.5 if gap <= 1 else 0.0
+
+
+def valid_public_application_url(value: str | None) -> bool:
+    if not value:
+        return False
+    try:
+        parsed = urlsplit(value)
+    except ValueError:
+        return False
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
+def remote_allows_india(location: str | None, description: str | None) -> bool:
+    text = " ".join(filter(None, (location, description)))
+    if any(pattern.search(text) for pattern in _REMOTE_EXCLUSIONS):
+        return False
+    # Portal cards commonly say only "United States" or "EMEA" while the
+    # remote filter is active. Treat that location itself as a restriction;
+    # otherwise worldwide searches would incorrectly qualify it for India.
+    if location and _REMOTE_LOCATION_EXCLUSIONS.search(location):
+        return False
+    if _INTERNATIONAL.search(text):
+        return True
+    return True
+
+
+def is_bengaluru_location(location: str | None) -> bool:
+    return bool(location and _BENGALURU.search(location))
+
+
+def role_is_relevant(
+    title: str | None,
+    description: str | None,
+    target_titles: Iterable[str],
+) -> bool:
+    normalized_title = normalize_for_matching(title)
+    if not normalized_title or any(pattern in normalized_title for pattern in _AVOID_TITLE_PATTERNS):
+        return False
+    title_tokens = set(normalized_title.split())
+    for target in target_titles:
+        normalized_target = normalize_for_matching(target)
+        if not normalized_target:
+            continue
+        target_tokens = set(normalized_target.split())
+        if normalized_target in normalized_title or normalized_title in normalized_target:
+            return True
+        if target_tokens and len(title_tokens & target_tokens) / len(target_tokens) >= 0.6:
+            return True
+    relevant_role = bool(
+        title_tokens
+        & {
+            "frontend",
+            "react",
+            "angular",
+            "javascript",
+            "typescript",
+            "ui",
+            "web",
+            "fullstack",
+            "product",
+        }
+    ) and bool(title_tokens & {"engineer", "developer", "lead"})
+    if relevant_role:
+        return True
+    if any(term in normalized_title for term in ("ai ", "genai", "llm")):
+        context = normalize_for_matching(description)
+        return any(term in context for term in ("frontend", "full stack", "fullstack", "react", "angular"))
+    return False
+
+
+def evaluate_hard_constraints(
+    job: NormalizedJob,
+    *,
+    target_titles: Iterable[str],
+) -> HardFilterResult:
+    """Apply mandatory pre-scoring rules from the candidate requirements."""
+    if job.is_open is False:
+        return HardFilterResult(False, reason="Job is closed or expired")
+    if not valid_public_application_url(job.application_url):
+        return HardFilterResult(False, reason="Application URL is missing or invalid")
+    if not role_is_relevant(job.title, job.description, target_titles):
+        return HardFilterResult(False, reason="Role is not aligned with the candidate profile")
+    if job.workplace_type is WorkplaceType.REMOTE:
+        if not remote_allows_india(job.location, job.description):
+            return HardFilterResult(False, reason="Remote geography explicitly excludes India")
+        return HardFilterResult(True, category="remote_eligible")
+    if job.workplace_type is WorkplaceType.HYBRID:
+        if is_bengaluru_location(job.location):
+            return HardFilterResult(True, category="bengaluru_hybrid")
+        return HardFilterResult(False, reason="Hybrid role is outside Bengaluru")
+    if job.workplace_type is WorkplaceType.ONSITE:
+        if is_bengaluru_location(job.location):
+            return HardFilterResult(True, category="bengaluru_onsite")
+        return HardFilterResult(False, reason="Onsite role is outside Bengaluru")
+    return HardFilterResult(False, reason="Workplace type is not explicit")

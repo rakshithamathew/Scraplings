@@ -122,12 +122,14 @@ class GreenhouseScraper(BaseJobScraper):
             "title": raw.get("title"),
             "company": raw.get("company_name") or self.company,
             "location": raw.get("location"),
+            "workplace_type": raw.get("workplace_type") or raw.get("workplaceType"),
             "description": _html_to_text(raw.get("content")),
             "skills": None,
             "source": self.source,
             "source_url": absolute_url,
             "application_url": absolute_url,
             "posted_at": raw.get("first_published"),
+            "is_open": True,
         }
         return normalize_job(values, source=self.source, base_url=self.careers_url)
 

@@ -6,7 +6,7 @@ from pathlib import Path
 from job_automation.database import JobRepository, JobStatus, initialize_database
 from job_automation.matching import UserProfile
 from job_automation.matching.ranker import rank_jobs
-from job_automation.normalizer import NormalizedJob
+from job_automation.normalizer import NormalizedJob, WorkplaceType
 from job_automation.resume import ResumeConfig, ResumeMetadata, ResumeSelector, load_resume_config
 
 
@@ -125,6 +125,8 @@ def test_ranker_stores_recommended_resume_for_qualified_job(tmp_path: Path) -> N
             location="Remote",
             description="Build frontend user interfaces with React, TypeScript, and CSS.",
             skills=["React", "TypeScript", "CSS"],
+            workplace_type=WorkplaceType.REMOTE,
+            is_open=True,
             source="test",
             application_url="https://example.test/jobs/frontend",
         )
@@ -135,7 +137,7 @@ def test_ranker_stores_recommended_resume_for_qualified_job(tmp_path: Path) -> N
             keywords=["frontend", "user interface"],
         )
 
-        rank_jobs(repository, profile, _selector(tmp_path))
+        rank_jobs(repository, profile, "resumes/frontend.pdf")
 
         stored = repository.get_job(job.id)
         assert stored is not None
