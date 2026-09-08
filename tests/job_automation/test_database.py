@@ -139,3 +139,20 @@ def test_active_resume_is_singleton(repository: JobRepository) -> None:
     assert active is not None
     assert active.original_filename == "second.docx"
     assert active.parsed_profile["skills"] == ["Angular"]
+
+
+def test_needs_review_is_separate_from_actionable_qualified(
+    repository: JobRepository,
+    job_data: dict,
+) -> None:
+    job = repository.create_job(**job_data)
+    repository.update_status(job.id, JobStatus.QUALIFIED)
+    repository.mark_application_needs_review(job.id, "Linkedin is not connected (disconnected)")
+
+    assert repository.count_needs_review() == 1
+    assert repository.count_actionable_qualified() == 0
+    assert repository.get_jobs(status=JobStatus.QUALIFIED, exclude_needs_review=True) == []
+
+    assert repository.clear_connection_reviews("linkedin") == 1
+    assert repository.count_needs_review() == 0
+    assert repository.count_actionable_qualified() == 1

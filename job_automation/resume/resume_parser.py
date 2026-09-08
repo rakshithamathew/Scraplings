@@ -13,7 +13,7 @@ from job_automation.matching.ats_score import UserProfile
 
 SUPPORTED_RESUME_SUFFIXES = {".pdf", ".docx"}
 _SPACE = re.compile(r"\s+")
-_YEAR_PATTERN = re.compile(r"\b(\d{1,2}(?:\.\d+)?)\s*\+?\s*years?\b", re.I)
+_YEAR_PATTERN = re.compile(r"\b(\d{1,2}(?:\.\d+)?)\s*\+?\s*years?\s+(?:of\s+)?(?:professional\s+|relevant\s+|industry\s+)?experience\b", re.I)
 _TITLE_PATTERN = re.compile(
     r"\b(?:developer|engineer|architect|technical lead|team lead|manager|analyst|designer|consultant)\b",
     re.I,

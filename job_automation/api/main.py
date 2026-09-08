@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+import asyncio
 from dataclasses import asdict
 from datetime import datetime, timezone
 from hashlib import sha256
@@ -190,6 +191,7 @@ def list_jobs(
     status: JobStatus | None = None,
     min_score: Annotated[float | None, Query(ge=0, le=100)] = None,
     needs_review: bool = False,
+    exclude_needs_review: bool = False,
     limit: Annotated[int, Query(ge=1, le=2000)] = 500,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[Job]:
@@ -197,6 +199,7 @@ def list_jobs(
         status=status,
         min_score=min_score,
         needs_review=needs_review,
+        exclude_needs_review=exclude_needs_review,
         limit=limit,
         offset=offset,
     )
@@ -277,7 +280,7 @@ def stats(repository: RepositoryDependency) -> StatsResponse:
     counts = repository.get_status_counts()
     return StatsResponse(
         total_jobs=repository.count_jobs(),
-        qualified=counts[JobStatus.QUALIFIED],
+        qualified=repository.count_actionable_qualified(),
         applied=counts[JobStatus.APPLIED],
         needs_review=repository.count_needs_review(),
     )
@@ -419,9 +422,120 @@ def application_run_status(request: Request) -> dict[str, Any]:
     return request.app.state.application_service.status()
 
 
+@router.get("/jobs/{job_id}/contacts")
+def list_job_contacts(job_id: int, repository: RepositoryDependency) -> list[dict[str, Any]]:
+    from job_automation.outreach.contact_repository import ContactRepository
+
+    if repository.get_job(job_id) is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return [
+        {key: getattr(contact, key) for key in (
+            "id", "job_id", "name", "title", "company", "linkedin_url", "work_email", "source", "priority", "evidence"
+        )}
+        for contact in ContactRepository(repository.engine).list(job_id)
+    ]
+
+
+@router.post("/contacts/discover")
+async def discover_pending_contacts(repository: RepositoryDependency) -> dict[str, Any]:
+    from dataclasses import asdict
+    from job_automation.outreach.discovery import ContactDiscoveryService
+
+    return asdict(await ContactDiscoveryService(repository).run())
+
+
+@router.post("/jobs/{job_id}/contacts/discover")
+async def discover_job_contacts(job_id: int, repository: RepositoryDependency) -> dict[str, Any]:
+    from dataclasses import asdict
+    from job_automation.outreach.discovery import ContactDiscoveryService
+
+    if repository.get_job(job_id) is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return asdict(await ContactDiscoveryService(repository).run(job_id))
+
+
+@router.post("/outreach/generate")
+def generate_personalized_outreach(request: Request, repository: RepositoryDependency) -> dict[str, Any]:
+    from dataclasses import asdict
+    from job_automation.outreach.personalized import PersonalizedOutreachService
+
+    return asdict(PersonalizedOutreachService(repository, project_root=request.app.state.project_root).run())
+
+
+@router.get("/jobs/{job_id}/outreach")
+def get_personalized_outreach(job_id: int, repository: RepositoryDependency) -> dict[str, Any]:
+    from job_automation.outreach.personalized import PersonalizedOutreachService, serialize_message
+
+    if repository.get_job(job_id) is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    records = PersonalizedOutreachService(repository).list(job_id)
+    if not records:
+        raise HTTPException(status_code=404, detail="Outreach has not been generated")
+    return serialize_message(records[0])
+
+
+@router.post("/jobs/{job_id}/outreach/generate")
+def generate_job_outreach(job_id: int, request: Request, repository: RepositoryDependency) -> dict[str, Any]:
+    from dataclasses import asdict
+    from job_automation.outreach.personalized import PersonalizedOutreachService
+
+    if repository.get_job(job_id) is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    try:
+        return asdict(PersonalizedOutreachService(repository, project_root=request.app.state.project_root).run(job_id))
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@router.post("/outreach/send")
+def send_outreach(request: Request) -> dict[str, Any]:
+    from dataclasses import asdict
+
+    return asdict(request.app.state.outreach_email_service.run())
+
+
+@router.post("/jobs/{job_id}/outreach/send")
+def send_job_outreach(job_id: int, request: Request, repository: RepositoryDependency) -> dict[str, Any]:
+    from dataclasses import asdict
+
+    if repository.get_job(job_id) is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return asdict(request.app.state.outreach_email_service.run(job_id))
+
+
+@router.get("/outreach/email-status")
+def outreach_email_status(request: Request, job_id: int | None = None) -> list[dict[str, Any]]:
+    return request.app.state.outreach_email_service.deliveries(job_id)
+
+
+@router.post("/outreach/linkedin/send")
+async def send_linkedin_outreach(request: Request) -> dict[str, Any]:
+    from dataclasses import asdict
+
+    return asdict(await request.app.state.linkedin_outreach_service.run())
+
+
+@router.post("/jobs/{job_id}/outreach/linkedin/send")
+async def send_job_linkedin_outreach(job_id: int, request: Request, repository: RepositoryDependency) -> dict[str, Any]:
+    from dataclasses import asdict
+
+    if repository.get_job(job_id) is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return asdict(await request.app.state.linkedin_outreach_service.run(job_id))
+
+
+@router.get("/outreach/linkedin/status")
+def linkedin_outreach_status(request: Request, job_id: int | None = None) -> list[dict[str, Any]]:
+    return request.app.state.linkedin_outreach_service.deliveries(job_id)
+
+
 @router.get("/connections", response_model=list[ConnectionResponse])
 def connections(request: Request) -> list[ConnectionState]:
-    return request.app.state.session_manager.list_connections()
+    states = request.app.state.session_manager.list_connections()
+    for state in states:
+        if state.connected:
+            request.app.state.repository.clear_connection_reviews(state.platform)
+    return states
 
 
 @router.post("/connections/{platform}/connect", response_model=ConnectionResponse)
@@ -440,6 +554,23 @@ def clear_platform_connection(platform: str, request: Request) -> None:
         request.app.state.session_manager.clear_session(platform)
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@router.post("/automation/run")
+async def run_automation_pipeline(request: Request) -> dict[str, Any]:
+    pipeline = request.app.state.automation_pipeline
+    try:
+        # Also supports Windows API servers using a Selector loop: browser
+        # subprocesses run on the worker's normal Proactor loop.
+        result = await asyncio.to_thread(lambda: asyncio.run(pipeline.run(request.app.state.sources_loader())))
+        return asdict(result)
+    except RuntimeError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+
+
+@router.get("/automation/status")
+def automation_pipeline_status(request: Request) -> list[dict[str, Any]]:
+    return request.app.state.automation_pipeline.history()
 
 
 def create_app(
@@ -463,6 +594,11 @@ def create_app(
         allow_headers=["Content-Type", "Accept"],
     )
     application.state.repository = JobRepository(engine)
+    from job_automation.outreach.email_automation import EmailAutomationService
+
+    application.state.outreach_email_service = EmailAutomationService(
+        application.state.repository, project_root=project_root
+    )
     application.state.project_root = Path(project_root).resolve()
     application.state.sources_loader = load_sources
     application.state.discovery_service_factory = lambda repository, profile: JobDiscoveryService(
@@ -479,6 +615,19 @@ def create_app(
         ),
     )
     application.state.session_manager = application.state.application_service.session_manager
+    from job_automation.outreach.linkedin_automation import LinkedInOutreachService
+
+    application.state.linkedin_outreach_service = LinkedInOutreachService(
+        application.state.repository, project_root=project_root,
+        session_manager=application.state.session_manager,
+    )
+    from job_automation.pipeline import AutomationPipeline
+    application.state.automation_pipeline = AutomationPipeline(
+        application.state.repository, project_root=project_root,
+        applications=application.state.application_service,
+        email=application.state.outreach_email_service,
+        linkedin=application.state.linkedin_outreach_service,
+    )
     application.include_router(router)
     return application
 

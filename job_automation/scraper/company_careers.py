@@ -148,5 +148,6 @@ class GenericCareerScraper(BaseJobScraper):
         description = self._all_text(response, self.selectors.detail_description)
         if description is not None:
             values["description"] = description
+            values["description_complete"] = bool(description)
         values["source_url"] = response.url
         return self.normalize(values)

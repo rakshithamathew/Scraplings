@@ -63,14 +63,20 @@ def rank_jobs(
     repository: JobRepository,
     profile: UserProfile,
     active_resume_path: str | None = None,
+    *, job_ids: list[int] | None = None, rescore_applied: bool = False,
 ) -> list[RankedJob]:
     """Score DISCOVERED/QUALIFIED jobs while preserving APPLIED and SKIPPED rows."""
     ranked: list[RankedJob] = []
-    for job in repository.get_jobs():
-        if job.status in _PRESERVED_STATUSES:
+    jobs = repository.get_jobs() if job_ids is None else [repository.get_job(job_id) for job_id in dict.fromkeys(job_ids)]
+    for job in jobs:
+        if job is None:
+            continue
+        if job.status in _PRESERVED_STATUSES and not (rescore_applied and job.status is JobStatus.APPLIED):
             continue
         normalized = _normalized_job(job)
         eligibility = evaluate_hard_constraints(normalized, target_titles=profile.target_titles)
+        if not eligibility.eligible and job.status is JobStatus.APPLIED:
+            continue
         if not eligibility.eligible and job.status is not JobStatus.APPLIED:
             repository.update_job(job.id, status=JobStatus.SKIPPED, skip_reason=eligibility.reason)
             LOGGER.info("job_filtered job_id=%s reason=%s", job.id, eligibility.reason)
@@ -84,7 +90,7 @@ def rank_jobs(
             "score_reason": breakdown.reason,
             "status": status,
         }
-        if status is JobStatus.QUALIFIED:
+        if status in {JobStatus.QUALIFIED, JobStatus.APPLIED}:
             changes["recommended_resume"] = active_resume_path
             changes["resume_match_reason"] = (
                 "Active uploaded resume used for ATS scoring" if active_resume_path else "No active resume"

@@ -24,16 +24,24 @@
       "options": {
         "queries": [
           "Frontend Developer",
-          "Angular Developer",
-          "React JS Developer",
-          "Software Developer",
-          "Software Engineer"
+          "Senior Frontend Developer",
+          "React.js Developer",
+          "React Engineer",
+          "Software Engineer",
+          "Senior Software Engineer",
+          "Full Stack Developer",
+          "Frontend Lead"
         ],
         "searches": [
-          {"location": "Bengaluru, Karnataka, India"},
-          {"location": "Worldwide", "remote": true}
+          {
+            "location": "Bengaluru, Karnataka, India"
+          },
+          {
+            "location": "Worldwide",
+            "remote": true
+          }
         ],
-        "date_posted_seconds": 604800,
+        "date_posted_seconds": null,
         "max_pages": 1,
         "page_size": 25
       }
@@ -54,8 +62,13 @@
           "Software Engineer"
         ],
         "searches": [
-          {"location": "Bengaluru"},
-          {"location": "Remote", "remote": true}
+          {
+            "location": "Bengaluru"
+          },
+          {
+            "location": "Remote",
+            "remote": true
+          }
         ],
         "max_pages": 1,
         "browser_wait_ms": 2500

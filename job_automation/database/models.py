@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
-from sqlalchemy import DateTime, Enum as SqlEnum, Float, Index, Integer, JSON, String, Text
+from sqlalchemy import DateTime, Enum as SqlEnum, Float, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from job_automation.normalizer import WorkplaceType
@@ -91,6 +91,7 @@ class Job(Base):
         index=True,
     )
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    description_complete: Mapped[Optional[bool]] = mapped_column(nullable=True)
     skills: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     required_skills: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     preferred_skills: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
@@ -182,3 +183,137 @@ class ActiveResume(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now
     )
+
+
+class ContactDiscoveryTask(Base):
+    """Durable, independently retryable public contact discovery for one job."""
+
+    __tablename__ = "contact_discovery_tasks"
+    job_id: Mapped[int] = mapped_column(ForeignKey("jobs.id"), primary_key=True)
+    company: Mapped[str] = mapped_column(String(500), index=True)
+    status: Mapped[str] = mapped_column(String(32), default="PENDING", index=True)
+    detail: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+
+
+class JobContact(Base):
+    """Public professional contact and the evidence linking them to a job."""
+
+    __tablename__ = "job_contacts"
+    __table_args__ = (
+        UniqueConstraint("job_id", "identity_key"),
+        UniqueConstraint("job_id", "linkedin_url"),
+        UniqueConstraint("job_id", "work_email"),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    job_id: Mapped[int] = mapped_column(ForeignKey("jobs.id"), index=True)
+    identity_key: Mapped[str] = mapped_column(String(64))
+    name: Mapped[str] = mapped_column(String(255))
+    title: Mapped[str] = mapped_column(String(255))
+    company: Mapped[str] = mapped_column(String(500))
+    linkedin_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    work_email: Mapped[Optional[str]] = mapped_column(String(320), nullable=True)
+    source: Mapped[str] = mapped_column(Text)
+    priority: Mapped[int] = mapped_column(Integer)
+    evidence: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class OutreachMessage(Base):
+    """Current CV-grounded email and LinkedIn draft for one qualified job."""
+
+    __tablename__ = "outreach_messages"
+    job_id: Mapped[int] = mapped_column(ForeignKey("jobs.id"), primary_key=True)
+    contact_id: Mapped[Optional[int]] = mapped_column(ForeignKey("job_contacts.id"), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default="WAITING_INPUT")
+    email_subject: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    email_body: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    linkedin_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    resume_sha256: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    input_hash: Mapped[str] = mapped_column(String(64))
+    missing_inputs: Mapped[list[str]] = mapped_column(JSON, default=list)
+    evidence: Mapped[dict] = mapped_column(JSON, default=dict)
+    contact_snapshot: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+
+
+class OutreachEmail(Base):
+    """Durable send claim and delivery audit. Never automatically replay a claim."""
+
+    __tablename__ = "outreach_emails"
+    __table_args__ = (UniqueConstraint("job_id", "recipient"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # One selected contact per job, even if contact discovery later finds more people.
+    job_id: Mapped[int] = mapped_column(Integer, unique=True, index=True)
+    contact_id: Mapped[int] = mapped_column(Integer)
+    recipient: Mapped[str] = mapped_column(String(320), index=True)
+    contact_name: Mapped[str] = mapped_column(String(255))
+    company: Mapped[str] = mapped_column(String(500))
+    status: Mapped[str] = mapped_column(String(32), default="SENDING", index=True)
+    subject: Mapped[str] = mapped_column(Text)
+    body: Mapped[str] = mapped_column(Text)
+    resume_sha256: Mapped[str] = mapped_column(String(64))
+    resume_filename: Mapped[str] = mapped_column(Text)
+    draft_input_hash: Mapped[str] = mapped_column(String(64))
+    connected_account_id: Mapped[str] = mapped_column(String(255))
+    attempted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    provider_message_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+
+class OutreachSendGate(Base):
+    """One database-wide cooldown shared by all API and CLI workers."""
+
+    __tablename__ = "outreach_send_gate"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    next_allowed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class LinkedInOutreach(Base):
+    """Independent LinkedIn delivery audit, including uncertain send attempts."""
+
+    __tablename__ = "linkedin_outreach"
+    __table_args__ = (UniqueConstraint("job_key", "contact_url"),)
+    job_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    job_key: Mapped[str] = mapped_column(String(255), index=True)
+    contact_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    contact_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    contact: Mapped[dict] = mapped_column(JSON, default=dict)
+    status: Mapped[str] = mapped_column(String(32), default="WAITING_INPUT")
+    linkedin_message_sent: Mapped[bool] = mapped_column(default=False)
+    message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    message_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    draft_input_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    attempted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    detail: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
+
+
+class LinkedInOutreachGate(Base):
+    __tablename__ = "linkedin_outreach_gate"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    next_allowed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    lease_token: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    lease_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ApplicationDispatchClaim(Base):
+    """Retained even after a crash: uncertain submissions must not be replayed."""
+    __tablename__ = "application_dispatch_claims"
+    identity: Mapped[str] = mapped_column(String(64), primary_key=True)
+    job_id: Mapped[int] = mapped_column(Integer, unique=True)
+    attempted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class PipelineRun(Base):
+    __tablename__ = "pipeline_runs"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    status: Mapped[str] = mapped_column(String(32), default="RUNNING")
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    summary: Mapped[dict] = mapped_column(JSON, default=dict)
+    results: Mapped[list] = mapped_column(JSON, default=list)

@@ -45,6 +45,7 @@ def test_contact_priority_prefers_role_recruiter() -> None:
             "Robin Recruiter",
             "Technical Recruiter",
             role_focus=["Frontend Engineering"],
+            posted_job=True,
         ),
     ]
 
@@ -72,7 +73,7 @@ def test_ceo_is_excluded_and_founder_requires_small_company_confirmation() -> No
     assert select_relevant_contact(_job(), [founder], small_company=False) is None
     match = select_relevant_contact(_job(), [founder], small_company=True)
     assert match is not None
-    assert match.priority == 5
+    assert match.priority == 7
 
 
 @pytest.mark.parametrize("status", [JobStatus.QUALIFIED, JobStatus.APPLIED])

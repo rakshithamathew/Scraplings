@@ -7,13 +7,15 @@ controls. LinkedIn may limit guest results or require sign-in at any time.
 from __future__ import annotations
 
 import asyncio
+import json
 from collections.abc import Mapping, Sequence
 import logging
 import re
 from typing import Any
-from urllib.parse import urlencode, urlsplit
+from urllib.parse import parse_qs, urlencode, urljoin, urlsplit
 
 from scrapling.parser import Selector
+from scrapling.fetchers import AsyncFetcher
 
 from job_automation.normalizer.jobs import NormalizedJob, normalize_job
 from job_automation.scraper.base import BaseJobScraper
@@ -21,10 +23,13 @@ from job_automation.scraper.base import BaseJobScraper
 
 DEFAULT_TITLES = (
     "Frontend Developer",
-    "Angular Developer",
-    "React JS Developer",
-    "Software Developer",
+    "Senior Frontend Developer",
+    "React.js Developer",
+    "React Engineer",
     "Software Engineer",
+    "Senior Software Engineer",
+    "Full Stack Developer",
+    "Frontend Lead",
 )
 _JOB_ID = re.compile(r"(?:jobPosting:|/jobs/view/(?:[^/?#]*-)?)(\d+)", re.I)
 _BLOCK_MARKERS = ("captcha", "security verification", "authwall", "sign in to view")
@@ -42,7 +47,7 @@ class LinkedInScraper(BaseJobScraper):
         company: str | None = None,
         queries: Sequence[str] = DEFAULT_TITLES,
         searches: Sequence[Mapping[str, Any]] | None = None,
-        date_posted_seconds: int | None = 604800,
+        date_posted_seconds: int | None = None,
         max_pages: int = 1,
         page_size: int = 25,
         timeout: float = 30.0,
@@ -60,6 +65,29 @@ class LinkedInScraper(BaseJobScraper):
         self.max_pages = max_pages
         self.page_size = page_size
         self.request_delay = request_delay
+        self.access_limited = False
+
+    async def _fetch(self, url: str) -> Selector | None:
+        # One ordinary public request. Never retry a challenge or follow a login redirect.
+        host = urlsplit(url).hostname or ""
+        if host != "linkedin.com" and not host.endswith(".linkedin.com"):
+            raise ValueError("LinkedIn discovery only fetches LinkedIn pages")
+        if self.access_limited:
+            return None
+        try:
+            response = await asyncio.wait_for(
+                AsyncFetcher.get(url, timeout=self.timeout, retries=1,
+                                 follow_redirects=False, impersonate=None, stealthy_headers=False),
+                timeout=self.timeout + 1,
+            )
+            if response.status in {401, 403, 429, 999} or 300 <= response.status < 400 or self._blocked(response):
+                self.access_limited = True
+                self.logger.warning("LinkedIn access stopped: HTTP %s at %s", response.status, url)
+                return None
+            return response if response.status < 400 else None
+        except Exception:
+            self.logger.exception("Unable to fetch LinkedIn public page: %s", url)
+            raise RuntimeError("LinkedIn public page request failed") from None
 
     @staticmethod
     def _first(node: Selector, selector: str) -> str | None:
@@ -125,6 +153,8 @@ class LinkedInScraper(BaseJobScraper):
 
     @staticmethod
     def _blocked(response: Selector) -> bool:
+        if any(marker in str(getattr(response, "url", "")).casefold() for marker in ("/authwall", "/login", "/checkpoint", "/challenge")):
+            return True
         try:
             text = str(response.get_all_text(separator=" ", strip=True)).casefold()
         except Exception:
@@ -150,11 +180,16 @@ class LinkedInScraper(BaseJobScraper):
         for title in queries:
             for search in searches:
                 for page in range(self.max_pages):
+                    if self.access_limited or access_limited:
+                        break
                     if self.request_delay:
                         await asyncio.sleep(self.request_delay)
                     url = self._search_url(title, search, page)
                     response = await self._fetch(url)
                     if response is None:
+                        break
+                    if self._blocked(response):
+                        access_limited = True
                         break
                     try:
                         cards = response.css("div.base-card")
@@ -175,30 +210,83 @@ class LinkedInScraper(BaseJobScraper):
                             if not key or key in seen or not job.title or not job.company:
                                 continue
                             seen.add(key)
-                            jobs.append(job)
+                            if self.request_delay:
+                                await asyncio.sleep(self.request_delay)
+                            detailed = await self.get_job_details(job)
+                            if self.access_limited:
+                                break
+                            if detailed is not None and detailed.description:
+                                jobs.append(detailed)
                         except Exception:
                             self.logger.exception("Skipping one malformed LinkedIn guest job")
                         if limit is not None and len(jobs) >= limit:
                             return jobs
-        if not jobs and access_limited:
+        if not jobs and (access_limited or self.access_limited):
             raise RuntimeError("LinkedIn guest search is currently requiring verification or sign-in")
         self.logger.info("Discovered %d unique LinkedIn guest jobs", len(jobs))
         return jobs
 
     async def get_job_details(self, job: NormalizedJob | str) -> NormalizedJob | None:
         existing = job if isinstance(job, NormalizedJob) else self.normalize({"application_url": job})
-        url = existing.application_url or existing.source_url
+        url = existing.source_url or existing.application_url
         if not url:
             return existing
         response = await self._fetch(url)
-        if response is None or self._blocked(response):
+        if response is None:
+            return None
+        if self._blocked(response):
+            self.access_limited = True
             return None
         values = existing.model_dump()
+        structured: dict[str, Any] = {}
+        for script in response.css('script[type="application/ld+json"]::text').getall():
+            try:
+                payload = json.loads(script)
+            except (ValueError, TypeError):
+                continue
+            nodes = payload if isinstance(payload, list) else [payload]
+            for node in nodes:
+                if isinstance(node, dict):
+                    nodes.extend(node.get("@graph", []))
+                    if node.get("@type") == "JobPosting":
+                        structured = node
+        description = self._all_text(response, "div.show-more-less-html__markup ::text")
+        if not description and structured.get("description"):
+            description = Selector(str(structured["description"])).get_all_text(separator=" ", strip=True)
+        workplace = self._all_text(response, ".topcard__flavor--workplace-type ::text")
+        for item in response.css("li.description__job-criteria-item"):
+            label = self._all_text(item, "h3 ::text") or ""
+            if "workplace" in label.casefold():
+                workplace = self._all_text(item, "span ::text")
+        if not workplace and structured.get("jobLocationType") == "TELECOMMUTE":
+            workplace = "REMOTE"
+        eligibility = structured.get("applicantLocationRequirements", [])
+        if isinstance(eligibility, dict):
+            eligibility = [eligibility]
+        eligible_locations = ", ".join(
+            item["name"] for item in eligibility
+            if isinstance(item, dict) and isinstance(item.get("name"), str)
+        ) if isinstance(eligibility, list) else ""
+        apply_url = self._first(response, "a.apply-button::attr(href)") or self._first(
+            response, "a.top-card-layout__cta::attr(href)")
+        if apply_url:
+            apply_url = urljoin(url, apply_url)
+            parsed = urlsplit(apply_url)
+            if parsed.hostname and parsed.hostname.endswith("linkedin.com") and parsed.path == "/jobs/view/externalApply/":
+                apply_url = parse_qs(parsed.query).get("url", [None])[0]
+            if not apply_url or urlsplit(apply_url).scheme not in {"https", "http"} or any(
+                marker in urlsplit(apply_url).path for marker in ("/login", "/signup", "/authwall")
+            ):
+                apply_url = None
         values.update(
             title=self._first(response, "h1.top-card-layout__title::text") or existing.title,
             company=self._first(response, "a.topcard__org-name-link::text") or existing.company,
-            location=self._first(response, "span.topcard__flavor--bullet::text") or existing.location,
-            description=self._all_text(response, "div.show-more-less-html__markup ::text") or existing.description,
-            source_url=response.url,
+            location=eligible_locations or self._first(response, "span.topcard__flavor--bullet::text") or existing.location,
+            description=description or existing.description,
+            description_complete=bool(description),
+            workplace_type=workplace or existing.workplace_type,
+            source_url=existing.source_url or url,
+            application_url=apply_url or existing.application_url,
+            posted_at=structured.get("datePosted") or self._first(response, "time::attr(datetime)") or existing.posted_at,
         )
         return self.normalize(values)

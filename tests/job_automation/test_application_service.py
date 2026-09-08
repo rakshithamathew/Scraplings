@@ -179,12 +179,15 @@ async def test_missing_resume_stops_before_browser(
     stored = repository.get_job(job.id)
 
     assert summary.failed == 0
-    assert summary.needs_review == 1
+    assert summary.needs_review == 0
+    assert summary.skipped == 1
     assert summary.attempted == 0
     assert called is False
     assert stored is not None
     assert stored.status is JobStatus.QUALIFIED
-    assert "resume" in (stored.review_reason or "").casefold()
+    assert "resume" in (stored.skip_reason or "").casefold()
+    assert stored.review_reason is None
+    assert stored.failure_reason is None
 
 
 @pytest.mark.asyncio
@@ -317,10 +320,16 @@ async def test_platform_job_requires_saved_connection(
 
     summary = await service.run_application_cycle(job_id=job.id)
 
-    assert summary.needs_review == 1
+    assert summary.needs_review == 0
+    assert summary.failed == 0
+    assert summary.skipped == 1
     assert summary.attempted == 0
     assert agent.closed is False
-    assert "not connected" in (repository.get_job(job.id).review_reason or "").casefold()  # type: ignore[union-attr]
+    stored = repository.get_job(job.id)
+    assert stored is not None
+    assert "not connected" in (stored.skip_reason or "").casefold()
+    assert stored.review_reason is None
+    assert stored.failure_reason is None
 
 
 @pytest.mark.asyncio
@@ -351,3 +360,40 @@ async def test_public_ats_does_not_require_discovery_platform_connection(
     summary = await service.run_application_cycle(job_id=job.id)
 
     assert summary.applied == 1
+
+
+@pytest.mark.asyncio
+async def test_connected_platform_reuses_saved_browser_profile(
+    repository: JobRepository,
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "resumes").mkdir()
+    (tmp_path / "resumes" / "active.pdf").touch()
+    repository.set_active_resume(
+        original_filename="active.pdf",
+        path="resumes/active.pdf",
+        content_type="application/pdf",
+        sha256="1" * 64,
+        parsed_profile=ParsedCandidateProfile(skills=["React"]).model_dump(),
+    )
+    job = _eligible_job(repository)
+    repository.update_job(job.id, application_url="https://www.linkedin.com/jobs/view/123")
+    received: dict[str, object] = {}
+
+    def factory(*args: object, **kwargs: object) -> ConfirmedAgent:
+        received.update(kwargs)
+        return ConfirmedAgent()
+
+    service = ApplicationService(
+        repository,
+        settings=ApplicationSettings(dry_run=False, delay_between_applications_seconds=0),
+        candidate_profile=CandidateProfile(first_name="Rakshitha", email="candidate@example.test"),
+        project_root=tmp_path,
+        agent_factory=factory,
+        session_manager=FakeSessionManager(True),  # type: ignore[arg-type]
+    )
+
+    summary = await service.run_application_cycle(job_id=job.id)
+
+    assert summary.applied == 1
+    assert received["browser_profile_directory"] == Path("profiles") / "linkedin"

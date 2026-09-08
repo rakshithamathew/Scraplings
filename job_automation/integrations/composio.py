@@ -1,7 +1,7 @@
 """Optional, read-only Composio connection and discovery boundary.
 
-This module never executes tools. Gmail sending and browser actions are reserved
-for later modules that require explicit user approval.
+This module never executes tools. The Gmail sending transport reuses this
+configuration and account boundary in integrations.gmail_sender.
 """
 
 from __future__ import annotations

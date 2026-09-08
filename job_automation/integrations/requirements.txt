@@ -1,0 +1,2 @@
+# Optional authenticated Gmail sender. Execution retries are disabled in modern SDKs.
+composio>=0.21,<1

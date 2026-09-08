@@ -30,7 +30,7 @@ from job_automation.scraper.base import BaseJobScraper
 from job_automation.scraper.company_careers import CareerPageSelectors, GenericCareerScraper
 from job_automation.scraper.greenhouse import GreenhouseScraper
 from job_automation.scraper.lever import LeverScraper
-from job_automation.scraper.linkedin import LinkedInScraper
+from job_automation.scraper.linkedin import DEFAULT_TITLES, LinkedInScraper
 from job_automation.scraper.naukri import NaukriScraper
 from job_automation.scraper.workday import WorkdayScraper, WorkdaySiteConfig
 
@@ -170,9 +170,9 @@ def build_scraper(source: SourceConfig) -> BaseJobScraper:
     if source.type == "linkedin":
         return LinkedInScraper(
             source.url,
-            queries=source.options.get("queries", ()),
+            queries=source.options.get("queries", DEFAULT_TITLES),
             searches=source.options.get("searches"),
-            date_posted_seconds=source.options.get("date_posted_seconds", 604800),
+            date_posted_seconds=source.options.get("date_posted_seconds"),
             max_pages=int(source.options.get("max_pages", 1)),
             page_size=int(source.options.get("page_size", 25)),
             **common,
@@ -240,6 +240,7 @@ class JobDiscoveryService:
             "location": job.location,
             "workplace_type": job.workplace_type,
             "description": job.description,
+            "description_complete": job.description_complete,
             "skills": job.skills or [],
             "required_skills": job.required_skills or [],
             "preferred_skills": job.preferred_skills or [],
@@ -260,6 +261,7 @@ class JobDiscoveryService:
             "location",
             "workplace_type",
             "description",
+            "description_complete",
             "skills",
             "required_skills",
             "preferred_skills",
@@ -276,6 +278,8 @@ class JobDiscoveryService:
                 incoming = values.get(field)
                 if incoming not in (None, "") and getattr(existing, field) != incoming:
                     changes[field] = incoming
+        if "description" in changes:
+            changes["description_complete"] = values.get("description_complete") is True
         return changes
 
     def _save_job(self, job: NormalizedJob, summary: DiscoverySummary) -> None:
@@ -289,8 +293,10 @@ class JobDiscoveryService:
 
         status = JobStatus.DISCOVERED
         skip_reason: str | None = None
-        if self.profile is not None:
-            decision = evaluate_hard_constraints(job, target_titles=self.profile.target_titles)
+        if self.profile is not None or job.source == "linkedin":
+            decision = evaluate_hard_constraints(
+                job, target_titles=DEFAULT_TITLES if job.source == "linkedin" else self.profile.target_titles
+            )
             if decision.eligible and decision.category:
                 setattr(summary, decision.category, getattr(summary, decision.category) + 1)
             elif not decision.eligible:
@@ -327,6 +333,8 @@ class JobDiscoveryService:
             try:
                 scraper = self.scraper_factory(source)
                 returned = await scraper.search_jobs(limit=source.limit)
+                if getattr(scraper, "access_limited", False):
+                    summary.failed_sources += 1
             except Exception:
                 summary.failed_sources += 1
                 self.logger.exception(
@@ -409,14 +417,24 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH)
     parser.add_argument("--database-url", default=DEFAULT_DATABASE_URL)
     parser.add_argument("--log-level", default="INFO")
+    parser.add_argument("--source", help="Run only this source type")
+    parser.add_argument("--discovery-only", action="store_true", help="Save jobs without resume scoring")
     return parser.parse_args()
 
 
 async def async_main(args: argparse.Namespace) -> int:
     sources = load_sources(args.config)
+    if args.source:
+        sources = [source for source in sources if source.type == args.source.casefold()]
+        if not sources:
+            raise ValueError(f"No configured source: {args.source}")
     engine = initialize_database(args.database_url)
     try:
         repository = JobRepository(engine)
+        if args.discovery_only:
+            discovery = await JobDiscoveryService(repository).run(sources)
+            print_summary(discovery)
+            return 1 if discovery.failed_sources else 0
         active = repository.get_active_resume()
         if active is None:
             raise ValueError("Upload an active resume before running discovery and scoring")

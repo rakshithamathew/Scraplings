@@ -38,6 +38,8 @@ async def test_linkedin_parses_and_deduplicates_public_guest_cards(monkeypatch: 
     )
 
     async def fake_fetch(url: str) -> Response:
+        if "/jobs/view/" in url:
+            return make_response(url, '<div class="show-more-less-html__markup">Build React applications.</div>')
         return make_response(url, html)
 
     monkeypatch.setattr(scraper, "_fetch", fake_fetch)

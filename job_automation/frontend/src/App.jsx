@@ -69,7 +69,9 @@ function App() {
         ? "?limit=2000"
         : activeFilter === "NEEDS_REVIEW"
           ? "?needs_review=true&limit=2000"
-          : `?status=${activeFilter}&limit=2000`;
+          : activeFilter === "QUALIFIED"
+            ? "?status=QUALIFIED&exclude_needs_review=true&limit=2000"
+            : `?status=${activeFilter}&limit=2000`;
       const [nextJobs, nextStats, nextResume, nextConnections] = await Promise.all([
         api(`/jobs${query}`),
         api("/stats"),
@@ -145,10 +147,11 @@ function App() {
       const result = await api(path, options);
       if (name === "scrape") setMessage(`Scrape complete: ${result.new_jobs} new, ${result.jobs_scored} scored.`);
       else if (name === "score") setMessage(`Scoring complete: ${result.jobs_scored} scored, ${result.qualified} qualified.`);
+      else if (name === "pipeline") setMessage(`${result.dry_run ? "Dry run" : "Automation"} complete: ${result.jobs_discovered} discovered, ${result.jobs_ats_over_70} ATS > 70, ${result.jobs_applied} applied, ${result.emails_sent} emails sent, ${result.linkedin_messages_sent} LinkedIn messages sent, ${result.jobs_skipped} skipped. ${result.errors || 0} stage errors.`);
       else if (result.eligible === 0) {
         setMessage(`None of the ${result.selected} selected jobs are currently eligible.`);
       } else {
-        setMessage(`Selected ${result.selected}: ${result.applied} applied, ${result.needs_review || 0} need review, ${result.failed} failed, ${result.ineligible || 0} ineligible.`);
+        setMessage(`Selected ${result.selected}: ${result.applied} applied, ${result.skipped || 0} skipped, ${result.ineligible || 0} ineligible.`);
         setSelectedJobIds(new Set());
       }
       await refresh(filter);
@@ -210,6 +213,7 @@ function App() {
           <button className="button" onClick={() => runAction("scrape", "/scrape")} disabled={Boolean(busy)}>Run Scraper</button>
           <button className="button" onClick={() => runAction("score", "/score")} disabled={Boolean(busy)}>Run Scoring</button>
           <button className="button" onClick={() => runAction("apply", "/applications/run")} disabled={Boolean(busy) || selectedJobIds.size === 0}>Auto Apply Selected ({selectedJobIds.size})</button>
+          <button className="button" onClick={() => runAction("pipeline", "/automation/run")} disabled={Boolean(busy) || !resume} title="Discover jobs, apply, and send outreach after confirmed submission">Run Full Automation</button>
           <button className="button secondary" onClick={() => refresh(filter)} disabled={Boolean(busy)}>Refresh</button>
         </div>
       </header>

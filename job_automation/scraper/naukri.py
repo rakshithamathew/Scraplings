@@ -213,10 +213,11 @@ class NaukriScraper(BaseJobScraper):
         if response is None or self._blocked(response):
             return None
         values = existing.model_dump()
+        description = self._all_text(response, "div.styles_JDC__dang-inner-html__h0K4t ::text, .job-desc ::text")
         values.update(
             title=self._first(response, "h1::text") or existing.title,
-            description=self._all_text(response, "div.styles_JDC__dang-inner-html__h0K4t ::text, .job-desc ::text")
-            or existing.description,
+            description=description or existing.description,
+            description_complete=bool(description),
             source_url=response.url,
         )
         return self.normalize(values)

@@ -152,8 +152,10 @@ def valid_public_application_url(value: str | None) -> bool:
     return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
 
 
-def remote_allows_india(location: str | None, description: str | None) -> bool:
+def remote_allows_india(location: str | None, description: str | None, *, require_evidence: bool = False) -> bool:
     text = " ".join(filter(None, (location, description)))
+    if re.search(r"\b(?:excluding|except|not (?:available|open) (?:in|to))\s+india\b|\bindia\s+(?:is\s+)?(?:excluded|not eligible)\b", text, re.I):
+        return False
     if any(pattern.search(text) for pattern in _REMOTE_EXCLUSIONS):
         return False
     # Portal cards commonly say only "United States" or "EMEA" while the
@@ -161,9 +163,13 @@ def remote_allows_india(location: str | None, description: str | None) -> bool:
     # otherwise worldwide searches would incorrectly qualify it for India.
     if location and _REMOTE_LOCATION_EXCLUSIONS.search(location):
         return False
-    if _INTERNATIONAL.search(text):
+    if not require_evidence:
         return True
-    return True
+    return bool(
+        re.search(r"\b(?:india|bengaluru|bangalore)\b", location or "", re.I)
+        or re.search(r"\b(?:worldwide|globally|work from anywhere|anywhere in the world)\b", text, re.I)
+        or re.search(r"\b(?:remote\s+(?:in|from)|(?:open|available)\s+to\s+(?:candidates\s+(?:in|from)\s+)?)\s*india\b", text, re.I)
+    )
 
 
 def is_bengaluru_location(location: str | None) -> bool:
@@ -223,8 +229,8 @@ def evaluate_hard_constraints(
     if not role_is_relevant(job.title, job.description, target_titles):
         return HardFilterResult(False, reason="Role is not aligned with the candidate profile")
     if job.workplace_type is WorkplaceType.REMOTE:
-        if not remote_allows_india(job.location, job.description):
-            return HardFilterResult(False, reason="Remote geography explicitly excludes India")
+        if not remote_allows_india(job.location, job.description, require_evidence=job.source == "linkedin"):
+            return HardFilterResult(False, reason="Remote geography excludes India or India eligibility is unconfirmed")
         return HardFilterResult(True, category="remote_eligible")
     if job.workplace_type is WorkplaceType.HYBRID:
         if is_bengaluru_location(job.location):

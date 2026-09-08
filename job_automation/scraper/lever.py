@@ -123,6 +123,7 @@ class LeverScraper(BaseJobScraper):
             else None,
             "workplace_type": raw.get("workplaceType") or raw.get("workplace_type"),
             "description": self._description(raw),
+            "description_complete": bool(raw.get("descriptionPlain") or raw.get("description")),
             "skills": None,
             "source": self.source,
             "source_url": raw.get("hostedUrl"),

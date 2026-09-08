@@ -30,6 +30,7 @@ class ContactCandidate(BaseModel):
     role_focus: list[str] = Field(default_factory=list)
     source_url: str | None = None
     verified: bool = False
+    posted_job: bool = False
 
     @field_validator("email")
     @classmethod
@@ -46,7 +47,7 @@ class ContactCandidate(BaseModel):
 
 class ContactMatch(BaseModel):
     contact: ContactCandidate
-    priority: int = Field(ge=1, le=5)
+    priority: int = Field(ge=1, le=7)
     reason: str
 
 
@@ -89,17 +90,21 @@ def _contact_priority(
 ) -> tuple[int, str] | None:
     title = normalize_for_matching(contact.title)
     is_recruiter = "recruiter" in title or "recruiting" in title
-    if is_recruiter and _focus_matches(job_title, contact.role_focus):
+    if (is_recruiter or "talent acquisition" in title) and contact.posted_job:
         return 1, "Recruiter responsible for the role"
-    if is_recruiter or "talent acquisition" in title or "talent partner" in title:
-        return 2, "Recruiting or talent acquisition"
+    if "talent acquisition" in title:
+        return 2, "Talent acquisition"
+    if "technical recruiter" in title or "technical recruiting" in title:
+        return 3, "Technical recruiter"
     if "hiring manager" in title:
-        return 3, "Hiring manager"
+        return 4, "Hiring manager"
     if any(role in title for role in ("engineering manager", "software manager", "development manager")):
-        return 4, "Engineering manager"
+        return 5, "Engineering manager"
+    if "head of engineering" in title:
+        return 6, "Head of engineering"
     is_founder_or_cto = "founder" in title or title == "cto" or "chief technology officer" in title
     if small_company and is_founder_or_cto:
-        return 5, "Founder or CTO at a user-confirmed small company"
+        return 7, "Founder or CTO at a user-confirmed small company"
     # CEOs and unrelated executives/managers are intentionally not eligible.
     return None
 

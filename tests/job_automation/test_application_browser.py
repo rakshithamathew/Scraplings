@@ -254,3 +254,68 @@ async def test_browser_profile_persists_authentication_cookie(tmp_path: Path) ->
         server.shutdown()
         server.server_close()
         thread.join(timeout=3)
+
+
+@pytest.mark.asyncio
+async def test_complete_application_handles_multiple_form_steps(tmp_path: Path) -> None:
+    first_step = """
+    <!doctype html><html><body>
+      <h1>Frontend Engineer</h1>
+      <form action="/step-two.html" method="get">
+        <label for="first">First Name</label><input id="first" name="first_name" required>
+        <label for="email">Email</label><input id="email" name="email" type="email" required>
+        <button type="submit">Continue</button>
+      </form>
+    </body></html>
+    """
+    second_step = """
+    <!doctype html><html><body>
+      <h1>Frontend Engineer</h1>
+      <form>
+        <label for="resume">Resume</label><input id="resume" name="resume" type="file" required>
+        <button type="submit">Submit application</button>
+      </form>
+    </body></html>
+    """
+    (tmp_path / "step-one.html").write_text(first_step, encoding="utf-8")
+    (tmp_path / "step-two.html").write_text(second_step, encoding="utf-8")
+    resume_directory = tmp_path / "resumes"
+    resume_directory.mkdir()
+    resume = resume_directory / "frontend_resume.pdf"
+    resume.write_bytes(b"%PDF-1.4\n% test fixture\n")
+    handler = partial(SimpleHTTPRequestHandler, directory=str(tmp_path))
+    server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    job = Job(
+        id=5,
+        title="Frontend Engineer",
+        company="Example",
+        location="Remote worldwide",
+        workplace_type=WorkplaceType.REMOTE,
+        source="test",
+        application_url=f"http://127.0.0.1:{server.server_port}/step-one.html",
+        recommended_resume="resumes/frontend_resume.pdf",
+        match_score=90,
+        status=JobStatus.QUALIFIED,
+        is_open=True,
+    )
+    agent = GenericApplicationAgent(project_root=tmp_path, headless=True, dry_run=True)
+    try:
+        assert await agent.open_application(job) is True
+
+        result = await agent.complete_application(
+            job,
+            CandidateProfile(first_name="Rakshitha", email="candidate@example.test"),
+            resume,
+        )
+
+        assert result.ready_to_submit is True
+        assert result.submitted is False
+        assert agent.page.url.endswith("/step-two.html?first_name=Rakshitha&email=candidate%40example.test")
+        assert agent.fill_result.resume_attached is True
+    finally:
+        await agent.close()
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=3)

@@ -6,10 +6,10 @@ from collections.abc import Mapping, Sequence
 from typing import Any, Optional
 from unicodedata import normalize as unicode_normalize
 
-from sqlalchemy import Engine, Select, func, or_, select
+from sqlalchemy import Engine, Select, delete, func, or_, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from .models import ActiveResume, ApplicationMethod, ApplicationStatus, Job, JobStatus, OutreachStatus, utc_now
+from .models import ActiveResume, ApplicationMethod, ApplicationStatus, ContactDiscoveryTask, Job, JobContact, JobStatus, OutreachMessage, OutreachStatus, utc_now
 
 
 class DuplicateJobError(ValueError):
@@ -57,6 +57,7 @@ class JobRepository:
                 raise DuplicateJobError(f"Job duplicates existing record {duplicate.id}")
             session.add(instance)
             session.flush()
+            session.add(ContactDiscoveryTask(job_id=instance.id, company=normalize_identity_text(instance.company)))
         return instance
 
     def get_job(self, job_id: int) -> Optional[Job]:
@@ -70,6 +71,7 @@ class JobRepository:
         status: Optional[JobStatus | str] = None,
         min_score: Optional[float] = None,
         needs_review: bool = False,
+        exclude_needs_review: bool = False,
         limit: Optional[int] = None,
         offset: int = 0,
     ) -> list[Job]:
@@ -85,6 +87,14 @@ class JobRepository:
                     Job.application_status == ApplicationStatus.NEEDS_REVIEW,
                     Job.review_reason.is_not(None),
                 )
+            )
+        if exclude_needs_review:
+            statement = statement.where(
+                Job.review_reason.is_(None),
+                or_(
+                    Job.application_status.is_(None),
+                    Job.application_status != ApplicationStatus.NEEDS_REVIEW,
+                ),
             )
         if limit is not None:
             statement = statement.limit(limit)
@@ -138,6 +148,8 @@ class JobRepository:
             changes["outreach_status"] = self._coerce_outreach_status(changes["outreach_status"])
         if "application_url" in changes:
             changes["application_url"] = normalize_application_url(changes["application_url"])
+        if "description" in changes and "description_complete" not in changes:
+            changes["description_complete"] = False
 
         with self._sessions.begin() as session:
             instance = session.get(Job, job_id)
@@ -187,6 +199,9 @@ class JobRepository:
             applied_at=applied_at,
             application_confirmation=confirmation,
             external_application_id=external_id,
+            skip_reason=None,
+            review_reason=None,
+            failure_reason=None,
         )
 
     def already_applied(self, job_id: int) -> bool:
@@ -293,8 +308,20 @@ class JobRepository:
             application_status=None,
             application_method=self._coerce_application_method(application_method).value,
             resume_used=resume_used,
+            skip_reason=None,
             review_reason=None,
             failure_reason=None,
+        )
+
+    def record_application_skip(self, job_id: int, reason: str) -> Optional[Job]:
+        """Record a per-run obstacle without creating review/failed state."""
+        return self.update_job(
+            job_id,
+            status=JobStatus.QUALIFIED,
+            application_status=None,
+            review_reason=None,
+            failure_reason=None,
+            skip_reason=reason.strip(),
         )
 
     def get_active_resume(self) -> Optional[ActiveResume]:
@@ -401,6 +428,40 @@ class JobRepository:
         with self._sessions() as session:
             return int(session.scalar(statement) or 0)
 
+    def count_actionable_qualified(self) -> int:
+        """Count qualified jobs that are not paused for human review."""
+        statement = select(func.count(Job.id)).where(
+            Job.status == JobStatus.QUALIFIED,
+            Job.review_reason.is_(None),
+            or_(
+                Job.application_status.is_(None),
+                Job.application_status != ApplicationStatus.NEEDS_REVIEW,
+            ),
+        )
+        with self._sessions() as session:
+            return int(session.scalar(statement) or 0)
+
+    def clear_connection_reviews(self, platform: str) -> int:
+        """Clear only stale review holds caused by a missing platform session."""
+        marker = f"{platform.strip().casefold()} is not connected"
+        updated = 0
+        with self._sessions.begin() as session:
+            jobs = session.scalars(
+                select(Job).where(
+                    Job.status == JobStatus.QUALIFIED,
+                    Job.review_reason.is_not(None),
+                )
+            )
+            for job in jobs:
+                if marker not in (job.review_reason or "").casefold():
+                    continue
+                job.review_reason = None
+                if job.application_status is ApplicationStatus.NEEDS_REVIEW:
+                    job.application_status = None
+                job.updated_at = utc_now()
+                updated += 1
+        return updated
+
     def job_exists(
         self,
         *,
@@ -456,6 +517,9 @@ class JobRepository:
             instance = session.get(Job, job_id)
             if instance is None:
                 return False
+            session.execute(delete(OutreachMessage).where(OutreachMessage.job_id == job_id))
+            session.execute(delete(JobContact).where(JobContact.job_id == job_id))
+            session.execute(delete(ContactDiscoveryTask).where(ContactDiscoveryTask.job_id == job_id))
             session.delete(instance)
         return True
 

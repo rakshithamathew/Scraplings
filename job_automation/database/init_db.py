@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 from sqlalchemy import Engine, MetaData, create_engine, inspect, text
 from sqlalchemy.schema import CreateTable
@@ -20,6 +21,7 @@ def _apply_additive_migrations(engine: Engine) -> None:
         return
     columns = {column["name"] for column in inspect(engine).get_columns("jobs")}
     additions = {
+        "description_complete": "BOOLEAN",
         "recommended_resume": "TEXT",
         "application_status": "VARCHAR(32)",
         "workplace_type": "VARCHAR(16)",
@@ -72,6 +74,9 @@ def _migrate_job_status_constraint(engine: Engine) -> None:
             text("SELECT sql FROM sqlite_master WHERE type='table' AND name='jobs'")
         )
     normalized_sql = (create_sql or "").upper()
+    status_constraint = re.search(
+        r"\bJOB_STATUS\s+CHECK\s*\(\s*STATUS\s+IN\s*\(([^)]*)\)\s*\)", normalized_sql
+    )
     legacy_statuses = (
         "SCORED",
         "READY_TO_APPLY",
@@ -81,8 +86,8 @@ def _migrate_job_status_constraint(engine: Engine) -> None:
         "INTERVIEW",
         "OFFER",
     )
-    if not normalized_sql or "JOB_STATUS CHECK" not in normalized_sql or not any(
-        f"'{status}'" in normalized_sql for status in legacy_statuses
+    if not status_constraint or not any(
+        f"'{status}'" in status_constraint.group(1) for status in legacy_statuses
     ):
         return
 

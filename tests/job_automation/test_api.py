@@ -184,6 +184,7 @@ def test_needs_review_is_counted_and_filterable(
 
     assert stats.status_code == 200
     assert stats.json()["needs_review"] == 1
+    assert stats.json()["qualified"] == 0
     assert filtered.status_code == 200
     assert [job["id"] for job in filtered.json()] == [ids["first"]]
     assert filtered.json()[0]["application_status"] == "NEEDS_REVIEW"

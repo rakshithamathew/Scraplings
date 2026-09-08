@@ -245,6 +245,7 @@ class WorkdayScraper(BaseJobScraper):
             "location": locations,
             "workplace_type": _first_value(raw, "workplaceType", "workplace_type", "remoteType"),
             "description": description,
+            "description_complete": bool(raw.get("jobDescription")) or raw.get("description_complete"),
             "skills": raw.get("skills"),
             "source": self.source,
             "source_url": _first_value(raw, "sourceUrl", "externalUrl", "source_url") or public_url,

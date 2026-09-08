@@ -180,6 +180,7 @@ class BaseApplicationAgent(ABC):
         self.resolved_application_url: str | None = None
         self.fill_result = FormFillResult()
         self._submission_clicked = False
+        self._resume_attached = False
 
     @abstractmethod
     def can_handle(self, job: ApplicationJob) -> bool:
@@ -433,8 +434,18 @@ class BaseApplicationAgent(ABC):
         if resolved is None:
             return False
         attached = await FormFieldMatcher(self.page).upload_resume(str(resolved))
-        self.fill_result.resume_attached = attached
-        return attached
+        if not attached:
+            # LinkedIn/Indeed can retain the previously selected resume without
+            # rendering another file input. Accept it only when the active
+            # resume's exact filename is visibly present on the application.
+            try:
+                page_text = (await self.page.locator("body").inner_text()).casefold()
+                attached = resolved.name.casefold() in page_text
+            except Exception:
+                attached = False
+        self._resume_attached = self._resume_attached or attached
+        self.fill_result.resume_attached = self._resume_attached
+        return self._resume_attached
 
     async def fill_job_questions(
         self,
@@ -486,6 +497,114 @@ class BaseApplicationAgent(ABC):
             errors.append(f"Unable to validate rendered form: {type(error).__name__}")
         return ApplicationValidation(valid=not errors, errors=tuple(dict.fromkeys(errors)))
 
+    async def complete_application(
+        self,
+        job: ApplicationJob,
+        profile: CandidateProfile,
+        resume_path: str | Path,
+        *,
+        max_steps: int = 8,
+    ) -> BrowserSubmissionResult:
+        """Fill a bounded multi-step application and click only its final submit."""
+        self._require_page()
+        if self._submission_clicked:
+            return BrowserSubmissionResult(submitted=True, message="Application was submitted while opening the job")
+
+        for _ in range(max_steps):
+            await self._validate_open_page()
+            details = await self.fill_candidate_details(profile)
+            if not self._resume_attached:
+                await self.upload_resume(resume_path)
+            questions = await self.fill_job_questions(job, profile)
+
+            final_control = await self._find_final_submit_control()
+            if final_control is not None:
+                validation = await self.validate_before_submit()
+                if not validation.valid:
+                    return BrowserSubmissionResult(message="; ".join(validation.errors))
+                if self.dry_run:
+                    return BrowserSubmissionResult(
+                        ready_to_submit=True,
+                        message="READY_TO_SUBMIT (DRY_RUN prevented the final click)",
+                    )
+                await final_control.click(timeout=self.navigation_timeout_ms)
+                self._submission_clicked = True
+                return BrowserSubmissionResult(
+                    submitted=True,
+                    message="Final submit control clicked; awaiting confirmation",
+                )
+
+            unresolved = tuple(dict.fromkeys((*details.unresolved_questions, *questions.unresolved_questions)))
+            if unresolved:
+                return BrowserSubmissionResult(
+                    message="; ".join(f"Unsupported required field: {item}" for item in unresolved)
+                )
+            invalid = await self.page.locator(
+                "input:required:invalid, textarea:required:invalid, select:required:invalid"
+            ).count()
+            if invalid:
+                return BrowserSubmissionResult(message=f"{invalid} required form field(s) remain invalid")
+
+            next_control = await self._find_next_control()
+            if next_control is None:
+                return BrowserSubmissionResult(message="No next step or final submit control was found")
+            previous_url = self.page.url
+            await next_control.click(timeout=self.navigation_timeout_ms)
+            try:
+                await self.page.wait_for_load_state("domcontentloaded", timeout=5_000)
+            except Exception:
+                pass
+            await self.page.wait_for_timeout(500)
+            if self.page.url != previous_url:
+                self.resolved_application_url = self.page.url
+
+        return BrowserSubmissionResult(message=f"Application exceeded the {max_steps}-step safety limit")
+
+    async def _find_final_submit_control(self) -> Any | None:
+        labels = re.compile(
+            r"^(?:submit(?: application)?|send application|apply(?: now)?|complete application)$",
+            re.I,
+        )
+        controls = self.page.locator('button, input[type="submit"], [role="button"]')
+        for index in range(await controls.count()):
+            control = controls.nth(index)
+            try:
+                if not await control.is_visible() or not await control.is_enabled():
+                    continue
+                label = " ".join(filter(None, (
+                    await control.inner_text(),
+                    await control.get_attribute("value") or "",
+                    await control.get_attribute("aria-label") or "",
+                ))).strip()
+                if labels.search(" ".join(label.split())):
+                    return control
+            except Exception:
+                continue
+        return None
+
+    async def _find_next_control(self) -> Any | None:
+        labels = re.compile(
+            r"^(?:next(?: step)?|continue(?: application| to (?:the )?next step)?|"
+            r"save and continue|review|review (?:your )?application)$",
+            re.I,
+        )
+        controls = self.page.locator('button, a[href], input[type="button"], input[type="submit"], [role="button"]')
+        for index in range(await controls.count()):
+            control = controls.nth(index)
+            try:
+                if not await control.is_visible() or not await control.is_enabled():
+                    continue
+                label = " ".join(filter(None, (
+                    await control.inner_text(),
+                    await control.get_attribute("value") or "",
+                    await control.get_attribute("aria-label") or "",
+                ))).strip()
+                if labels.search(" ".join(label.split())):
+                    return control
+            except Exception:
+                continue
+        return None
+
     async def submit(self) -> BrowserSubmissionResult:
         """Click the final submit control only when dry-run mode is disabled."""
         validation = await self.validate_before_submit()
@@ -496,12 +615,10 @@ class BaseApplicationAgent(ABC):
                 ready_to_submit=True,
                 message="READY_TO_SUBMIT (DRY_RUN prevented the final click)",
             )
-        controls = self.page.locator('button[type="submit"], input[type="submit"]')
-        if await controls.count() == 0:
-            controls = self.page.get_by_role("button", name=re.compile(r"submit|apply", re.I))
-        if await controls.count() == 0:
+        control = await self._find_final_submit_control()
+        if control is None:
             return BrowserSubmissionResult(message="No final submit control was found")
-        await controls.first.click(timeout=self.navigation_timeout_ms)
+        await control.click(timeout=self.navigation_timeout_ms)
         self._submission_clicked = True
         return BrowserSubmissionResult(submitted=True, message="Submit control clicked; awaiting confirmation")
 

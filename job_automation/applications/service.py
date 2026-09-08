@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from hashlib import sha256
 from datetime import datetime, timezone
 import json
 import logging
@@ -12,10 +13,16 @@ import sys
 from typing import Any, Callable
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from sqlalchemy.dialects.sqlite import insert
+from sqlalchemy.orm import Session
+from sqlalchemy import or_, select
+from job_automation.database.models import ApplicationDispatchClaim
+from job_automation.database.repository import normalize_application_url
 
 from job_automation.applications.base import (
     ApplicationNeedsReviewError,
     BaseApplicationAgent,
+    BrowserSubmissionResult,
     application_eligibility_errors,
 )
 from job_automation.applications.candidate_profile import CandidateProfile, load_candidate_profile
@@ -58,6 +65,7 @@ class ApplicationCycleSummary(BaseModel):
     applied: int = 0
     needs_review: int = 0
     failed: int = 0
+    skipped: int = 0
     skipped_duplicates: int = 0
     dry_run: bool = True
     started_at: datetime
@@ -118,6 +126,18 @@ _PROVIDER_METHODS = {
 
 
 AgentFactory = Callable[..., BaseApplicationAgent | None]
+
+
+def application_dispatch_identity(job):
+    return sha256(normalize_application_url(job.application_url).encode()).hexdigest()
+
+
+def application_dispatch_claimed(repository, job):
+    with Session(repository.engine) as session:
+        return session.scalar(select(ApplicationDispatchClaim.identity).where(or_(
+            ApplicationDispatchClaim.job_id == job.id,
+            ApplicationDispatchClaim.identity == application_dispatch_identity(job),
+        ))) is not None
 
 
 class ApplicationService:
@@ -248,10 +268,10 @@ class ApplicationService:
         resume_available = bool(resume_path and absolute_resume.is_file())
         errors = application_eligibility_errors(job, resume_available=resume_available)
         if errors:
-            self.repository.mark_application_needs_review(job.id, "; ".join(errors))
-            summary.needs_review += 1
+            self.repository.record_application_skip(job.id, "; ".join(errors))
+            summary.skipped += 1
             LOGGER.info(
-                "application_result company=%s title=%s provider=%s result=NEEDS_REVIEW reason=%s",
+                "application_result company=%s title=%s provider=%s result=SKIPPED reason=%s",
                 job.company,
                 job.title,
                 detect_provider_from_url(job.application_url).value,
@@ -269,14 +289,13 @@ class ApplicationService:
         # ATS URL must not be blocked by a LinkedIn/Naukri discovery source.
         if required_platform and not self.session_manager.is_connected(required_platform):
             state = self.session_manager.status(required_platform)
-            self.repository.mark_application_needs_review(
+            self.repository.record_application_skip(
                 job.id,
                 f"{required_platform.title()} is not connected ({state.status}); connect it before Auto Apply",
-                application_method=detected,
             )
-            summary.needs_review += 1
+            summary.skipped += 1
             LOGGER.info(
-                "application_result company=%s title=%s result=NEEDS_REVIEW platform=%s connection=%s",
+                "application_result company=%s title=%s result=SKIPPED platform=%s connection=%s",
                 job.company,
                 job.title,
                 required_platform,
@@ -302,11 +321,22 @@ class ApplicationService:
             browser_channel=self.settings.browser_channel,
         )
         if agent is None:
-            self.repository.mark_application_needs_review(job.id, "No supported application adapter was found")
-            summary.needs_review += 1
+            self.repository.record_application_skip(job.id, "No supported application adapter was found")
+            summary.skipped += 1
             return
 
         started_at = datetime.now(timezone.utc)
+        if not self.settings.dry_run:
+            # Commit before any adapter can submit. Keep the claim on unknown
+            # outcomes, including process termination and failed confirmation.
+            identity = application_dispatch_identity(job)
+            with Session(self.repository.engine) as session, session.begin():
+                claimed = session.execute(insert(ApplicationDispatchClaim).values(
+                    identity=identity, job_id=job.id,
+                ).on_conflict_do_nothing()).rowcount
+            if not claimed:
+                summary.skipped_duplicates += 1
+                return
         summary.attempted += 1
         try:
             LOGGER.info(
@@ -327,39 +357,37 @@ class ApplicationService:
             )
             provider = await detect_provider(resolved_url, agent.page)
             detected = _PROVIDER_METHODS[provider]
-            details = await agent.fill_candidate_details(self.candidate_profile)
-            attached = await agent.upload_resume(absolute_resume)
-            questions = await agent.fill_job_questions(job, self.candidate_profile)
+            if hasattr(agent, "complete_application"):
+                submission = await agent.complete_application(
+                    job,
+                    self.candidate_profile,
+                    absolute_resume,
+                )
+            else:
+                # Preserve compatibility with injected/testing adapters while
+                # all built-in agents use the multi-step implementation.
+                details = await agent.fill_candidate_details(self.candidate_profile)
+                attached = await agent.upload_resume(absolute_resume)
+                questions = await agent.fill_job_questions(job, self.candidate_profile)
+                validation = await agent.validate_before_submit()
+                submission = (
+                    await agent.submit()
+                    if validation.valid
+                    else BrowserSubmissionResult(message="; ".join(validation.errors))
+                )
             LOGGER.info(
                 "application_filled company=%s title=%s provider=%s resolved_url=%s fields=%s resume_attached=%s unresolved=%s",
                 job.company,
                 job.title,
                 provider.value,
                 resolved_url,
-                sorted(set((*details.fields_filled, *questions.fields_filled))),
-                attached,
-                list(dict.fromkeys((*details.unresolved_questions, *questions.unresolved_questions))),
+                sorted(set(getattr(getattr(agent, "fill_result", None), "fields_filled", ()))),
+                bool(getattr(getattr(agent, "fill_result", None), "resume_attached", False)),
+                list(dict.fromkeys(getattr(getattr(agent, "fill_result", None), "unresolved_questions", ()))),
             )
-            validation = await agent.validate_before_submit()
-            if not validation.valid:
-                reason = "; ".join(validation.errors)
-                self.repository.mark_application_needs_review(
-                    job.id,
-                    reason,
-                    application_method=detected,
-                )
-                summary.needs_review += 1
-                LOGGER.info(
-                    "application_result company=%s title=%s result=NEEDS_REVIEW reason=%s",
-                    job.company,
-                    job.title,
-                    reason,
-                )
-                return
             latest = self.repository.get_job(job.id)
             if latest is None:
-                self.repository.mark_application_failed(job.id, "Job record disappeared before submission")
-                summary.failed += 1
+                summary.skipped += 1
                 return
             final_errors = application_eligibility_errors(latest, resume_available=True)
             if self.repository.already_applied(job.id):
@@ -367,14 +395,9 @@ class ApplicationService:
                 return
             if final_errors:
                 reason = "; ".join(final_errors)
-                self.repository.mark_application_needs_review(
-                    job.id,
-                    reason,
-                    application_method=detected,
-                )
-                summary.needs_review += 1
+                self.repository.record_application_skip(job.id, reason)
+                summary.skipped += 1
                 return
-            submission = await agent.submit()
             if submission.ready_to_submit:
                 self.repository.record_ready_to_submit(
                     job.id,
@@ -384,14 +407,10 @@ class ApplicationService:
                 LOGGER.info("application_result company=%s title=%s result=READY_TO_SUBMIT", job.company, job.title)
                 return
             if not submission.submitted:
-                self.repository.mark_application_failed(
-                    job.id,
-                    submission.message,
-                    application_method=detected,
-                )
-                summary.failed += 1
+                self.repository.record_application_skip(job.id, submission.message)
+                summary.skipped += 1
                 LOGGER.info(
-                    "application_result company=%s title=%s result=FAILED confirmation=false reason=%s",
+                    "application_result company=%s title=%s result=SKIPPED confirmation=false reason=%s",
                     job.company,
                     job.title,
                     submission.message,
@@ -399,14 +418,10 @@ class ApplicationService:
                 return
             confirmation = await agent.verify_submission()
             if not confirmation.confirmed:
-                self.repository.mark_application_failed(
-                    job.id,
-                    confirmation.message,
-                    application_method=detected,
-                )
-                summary.failed += 1
+                self.repository.record_application_skip(job.id, confirmation.message)
+                summary.skipped += 1
                 LOGGER.info(
-                    "application_result company=%s title=%s result=FAILED confirmation=false reason=%s",
+                    "application_result company=%s title=%s result=SKIPPED confirmation=false reason=%s",
                     job.company,
                     job.title,
                     confirmation.message,
@@ -432,23 +447,19 @@ class ApplicationService:
                 for marker in ("sign in", "log in", "login", "authentication", "access approval")
             ):
                 self.session_manager.mark_disconnected(required_platform, str(error))
-            self.repository.mark_application_needs_review(
-                job.id,
-                str(error),
-                application_method=detected,
-            )
-            summary.needs_review += 1
+            self.repository.record_application_skip(job.id, str(error))
+            summary.skipped += 1
             LOGGER.info(
-                "application_result company=%s title=%s result=NEEDS_REVIEW reason=%s",
+                "application_result company=%s title=%s result=SKIPPED reason=%s",
                 job.company,
                 job.title,
                 error,
             )
         except Exception as error:
             reason = f"{type(error).__name__}: {error}"
-            self.repository.mark_application_failed(job.id, reason, application_method=detected)
-            summary.failed += 1
-            LOGGER.exception("application_failed company=%s title=%s", job.company, job.title)
+            self.repository.record_application_skip(job.id, reason)
+            summary.skipped += 1
+            LOGGER.exception("application_skipped company=%s title=%s", job.company, job.title)
         finally:
             await agent.close()
 

@@ -124,6 +124,7 @@ class GreenhouseScraper(BaseJobScraper):
             "location": raw.get("location"),
             "workplace_type": raw.get("workplace_type") or raw.get("workplaceType"),
             "description": _html_to_text(raw.get("content")),
+            "description_complete": bool(raw.get("content")),
             "skills": None,
             "source": self.source,
             "source_url": absolute_url,

@@ -161,6 +161,7 @@ class NormalizedJob(BaseModel):
     location: str | None = None
     workplace_type: WorkplaceType = WorkplaceType.UNKNOWN
     description: str | None = None
+    description_complete: bool | None = None
     skills: list[str] | None = None
     required_skills: list[str] | None = None
     preferred_skills: list[str] | None = None
@@ -214,6 +215,7 @@ class NormalizedJob(BaseModel):
 
 
 _FIELD_ALIASES: dict[str, tuple[str, ...]] = {
+    "description_complete": ("description_complete",),
     "external_id": ("external_id", "id", "job_id", "jobId", "jobReqId", "requisition_id"),
     "title": ("title", "text", "job_title", "jobTitle"),
     "company": ("company", "company_name", "companyName", "organization"),
