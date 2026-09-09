@@ -1,4 +1,4 @@
-"""Bounded public contact discovery. No authentication, enrichment vendors, or email inference."""
+"""Bounded public contact discovery with saved-session job rendering and no email inference."""
 from __future__ import annotations
 
 import argparse
@@ -8,6 +8,7 @@ import json
 import logging
 import re
 import socket
+from pathlib import Path
 from dataclasses import dataclass
 from urllib.parse import unquote, urljoin, urlsplit, urlunsplit
 
@@ -90,8 +91,10 @@ class PublicContact(BaseModel):
 def role_priority(title, context, job_title, *, posted_job=False, employee_count=None):
     title = normalize_identity_text(title)
     recruiter = bool(re.search(r'\b(?:recruiter|recruiting)\b', title))
-    if posted_job and (recruiter or 'talent acquisition' in title):
+    if posted_job and (recruiter or 'talent acquisition' in title or title in {'job poster', 'hr', 'hr recruiter', 'human resources'}):
         return 1
+    if recruiter and 'technical' not in title:
+        return 2
     if 'talent acquisition' in title:
         return 2
     if 'technical recruiter' in title or 'technical recruiting' in title:
@@ -134,10 +137,15 @@ class AccessBlocked(RuntimeError):
 
 
 class PublicContactScraper:
-    def __init__(self, *, request_delay=2, max_pages=6, timeout=25):
+    def __init__(self, *, request_delay=2, max_pages=6, timeout=25, company_sources=None, portal_reader=None):
         self.request_delay, self.max_pages, self.timeout = request_delay, max_pages, timeout
         self.cache = {}
         self.blocked_hosts = set()
+        self.portal_reader = portal_reader
+        if company_sources is None:
+            path = Path(__file__).resolve().parents[2] / 'config' / 'company_contact_sources.json'
+            company_sources = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {}
+        self.company_sources = {normalize_identity_text(name): urls for name, urls in company_sources.items()}
 
     async def fetch(self, url):
         if url in self.cache:
@@ -152,6 +160,14 @@ class PublicContactScraper:
         if not addresses or any(not ipaddress.ip_address(item[4][0]).is_global for item in addresses):
             raise ValueError('Non-public network destination')
         await asyncio.sleep(self.request_delay)
+        if self.portal_reader and self.portal_reader.available(url):
+            try:
+                page = await self.portal_reader.read(url, self.timeout)
+            except AccessBlocked:
+                self.blocked_hosts.add(host)
+                raise
+            self.cache[url] = page
+            return page
         page = await asyncio.wait_for(AsyncFetcher.get(
             url, timeout=self.timeout, retries=1, follow_redirects=False,
             impersonate=None, stealthy_headers=False,
@@ -193,7 +209,7 @@ class PublicContactScraper:
                 email = unquote(email.removeprefix('mailto:').split('?')[0]).strip()
                 domain = email.rsplit('@', 1)[-1].lower()
                 employer_host = urlsplit(company_url or '').hostname
-                if official or (employer_host and domain == employer_host.removeprefix('www.')):
+                if official or posted or (employer_host and domain == employer_host.removeprefix('www.')):
                     if re.fullmatch(r'[^@\s]+@[^@\s]+\.[^@\s]+', email) and domain not in PERSONAL_EMAIL:
                         work_email = email
             contacts.append(PublicContact(name=name.strip(), title=title.strip(), company=job.company,
@@ -218,11 +234,40 @@ class PublicContactScraper:
                 add(name, title, str(employer.get('name', '')), links, node.get('email'), context, company_url=public_url(employer.get('url')))
 
         if job_page:
-            for card in page.css('.hirer-card'):
-                name = text(card, '.hirer-card__hirer-name ::text')
-                title = text(card, '.hirer-card__hirer-job-title ::text')
-                add(name, title, job.company, card.css('a::attr(href)').getall(), None,
+            for card in page.css('.hirer-card, .jobs-poster, .recruiter-info, .recruiter-details, [data-testid="recruiter-card"]'):
+                name = text(card, '.hirer-card__hirer-name::text, .hirer-card__hirer-name ::text, .jobs-poster__name::text, .recruiter-name::text, [itemprop="name"]::text')
+                title = text(card, '.hirer-card__hirer-job-title::text, .jobs-poster__headline::text, .recruiter-designation::text, [itemprop="jobTitle"]::text') or 'Job poster'
+                emails = set(re.findall(r'[\w.+%-]+@[\w.-]+\.[A-Za-z]{2,}', card.get_all_text(separator=' ', strip=True)))
+                emails.update(unquote(link[7:].split('?')[0]) for link in card.css('a[href^="mailto:"]::attr(href)').getall())
+                add(name, title, job.company, [urljoin(url, link) for link in card.css('a::attr(href)').getall()], next(iter(emails)) if len(emails) == 1 else None,
                     text(card, '::text, *::text') or title, posted=True)
+        # Shared hiring inboxes are contacts, not invented people. Only use
+        # addresses explicitly published in recruiting content, never site footers.
+        if official or job_page:
+            scopes = list(page.css('#job-details, .jobs-description__content, .show-more-less-html__markup, [class*="JDC__dang-inner-html"], .job-desc, [itemprop="description"]')) if job_page else list(page.css('main, article'))
+            if job_page:
+                for node in nodes:
+                    if node.get('@type') == 'JobPosting' and isinstance(node.get('description'), str):
+                        employer = node.get('hiringOrganization') or {}
+                        if isinstance(employer, dict) and normalize_identity_text(str(employer.get('name', ''))) == company_key:
+                            scopes.append(Selector(node['description']))
+            if official and not scopes:
+                scopes = [page]
+            for scope in scopes:
+                content = scope.get_all_text(separator=' ', strip=True)
+                for match in re.finditer(r'[\w.+%-]+@[\w.-]+\.[A-Za-z]{2,}', content):
+                    email = match.group().lower()
+                    local, domain = email.rsplit('@', 1)
+                    if domain in PERSONAL_EMAIL or not re.fullmatch(r'(?:hr|careers?|jobs|recruitment|recruiting|talent)(?:[._-][a-z]+)?', local):
+                        continue
+                    context = content[max(0, match.start()-180):match.end()+120]
+                    if not re.search(r'\b(?:apply|resume|cv|candidates|hiring|recruitment|careers)\b', context, re.I):
+                        continue
+                    if official and domain != (urlsplit(url).hostname or '').removeprefix('www.'):
+                        continue
+                    contacts.append(PublicContact(name='Recruitment team', title='Public recruitment mailbox',
+                        company=job.company, work_email=email, source=url, priority=7,
+                        evidence='Shared hiring inbox, not a named person. ' + context.strip()))
         if official:
             for card in page.css('.team-member, .person-card, [itemtype="https://schema.org/Person"]'):
                 name = text(card, '[itemprop="name"]::text, .name::text, h3::text')
@@ -237,7 +282,14 @@ class PublicContactScraper:
         if not seed:
             return [], 'FAILED', 'Job has no public source URL'
         pending = [(seed, False, True)]
+        application = public_url(job.application_url)
+        if application and application != seed:
+            pending.append((application, False, True))
+        for company_url in self.company_sources.get(normalize_identity_text(job.company), []):
+            if public_url(company_url):
+                pending.append((public_url(company_url), True, False))
         visited, contacts, official_hosts = set(), [], set()
+        blocked, failed = [], []
         employee_count = None
         while pending and len(visited) < self.max_pages:
             url, official, job_page = pending.pop(0)
@@ -247,9 +299,20 @@ class PublicContactScraper:
             try:
                 page = await self.fetch(url)
             except AccessBlocked as error:
-                return contacts, 'BLOCKED', str(error)
+                blocked.append(f'{urlsplit(url).hostname}: {error}')
+                continue
             except Exception as error:
-                return contacts, 'FAILED', str(error)
+                failed.append(f'{urlsplit(url).hostname}: {type(error).__name__}: {error}')
+                continue
+            host = urlsplit(url).hostname or ''
+            if job_page and (host.endswith('naukri.com') or host.endswith('linkedin.com')):
+                has_job = any(node.get('@type') == 'JobPosting' for node in structured_nodes(page)) or bool(page.css(
+                    '#job-details, .jobs-description__content, .show-more-less-html__markup, [class*="JDC__dang-inner-html"], .job-desc, .hirer-card, .recruiter-info, .recruiter-details, [data-testid="recruiter-card"]'))
+                if not has_job:
+                    failed.append(f'{host}: No readable job description or recruiter content; empty JavaScript page or unsupported layout')
+                    continue
+            if official:
+                official_hosts.add(host)
             found, employee_count = self.parse(job, page, url, official=official, job_page=job_page, employee_count=employee_count)
             contacts.extend(found)
             # Follow only company URLs explicitly identified by the job publisher.
@@ -273,7 +336,12 @@ class PublicContactScraper:
                     label = link.get_all_text(separator=' ', strip=True).lower()
                     if href and urlsplit(href).hostname in official_hosts and re.search(r'\b(?:team|leadership|about|careers|people)\b', label):
                         pending.append((href, True, False))
-        return contacts, 'COMPLETE', f'{len(visited)} public pages checked; {len(contacts)} relevant records found'
+        email_count = len({contact.work_email for contact in contacts if contact.work_email})
+        detail = f'{len(visited)} public pages checked; {len(contacts)} relevant records; {email_count} published work emails.'
+        detail += ' ' + '; '.join(blocked + failed)
+        if not contacts and not blocked and not failed:
+            detail += ' No relevant public contact was published in the supported page content.'
+        return contacts, 'BLOCKED' if blocked else 'FAILED' if failed else 'COMPLETE', detail.strip()
 
 
 @dataclass
@@ -289,7 +357,10 @@ class ContactDiscoveryService:
     def __init__(self, repository, *, scraper=None):
         self.jobs = repository
         self.contacts = ContactRepository(repository.engine)
-        self.scraper = scraper or PublicContactScraper()
+        if scraper is None:
+            from job_automation.outreach.portal_reader import PortalContactReader
+            scraper = PublicContactScraper(portal_reader=PortalContactReader())
+        self.scraper = scraper
 
     async def run(self, job_id=None):
         summary = ContactDiscoverySummary()

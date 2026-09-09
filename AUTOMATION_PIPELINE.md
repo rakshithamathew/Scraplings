@@ -1,6 +1,6 @@
 # Complete automation pipeline
 
-Use **Run Full Automation** in the existing dashboard, `POST /automation/run`, or:
+Use `POST /automation/run` or the CLI for the complete pipeline:
 
 ```powershell
 .\.venv\Scripts\python.exe -m job_automation.pipeline
@@ -67,3 +67,51 @@ replay. Each completed run logs and returns:
 The discovered count covers the current scrape; subsequent stages also process
 the existing database backlog. These counts therefore need not sum to discovered.
 No contacts, CV contents, or message bodies are printed in the final summary.
+
+## One-screen dashboard
+
+The dashboard exposes the same modules as individual actions: Upload Resume,
+Run Scraper, Run Scoring, Find Contacts, Auto Apply, Send Outreach, and Refresh.
+Run Scraper saves discovery results; Run Scoring performs qualification separately.
+Auto Apply uses selected jobs, or the configured batch when none are selected.
+Send Outreach sends email only for confirmed APPLIED jobs and respects existing
+duplicate guards and rate limits. Open LinkedIn opens the saved contact profile;
+it does not send a message or mark a message as sent.
+
+Each row displays the highest-priority saved relevant contact and that person's
+public email/profile. Missing email remains Not found; a different person's email
+is never substituted. The contacts table stores work email with the related job ID.
+Find Contact refreshes a single job, Draft Email saves and previews a personalized
+draft inline, and Send Email requires a confirmed application and public email.
+
+Email statuses are NOT_FOUND, FOUND, DRAFTED, and SENT. LinkedIn statuses are
+NOT_FOUND, FOUND, and SENT. Confirmed delivery receipts drive SENT and the top
+delivery counters. Uncertain email attempts show a review note and disable repeat
+send even though their display status never advances to SENT. CONTACTS FOUND counts
+jobs with a relevant contact, not the total number of employees discovered.
+
+ALL, QUALIFIED, APPLIED, EMAIL FOUND, and EMAIL SENT filters share the same table.
+EMAIL FOUND includes any displayed contact with a public work email, including
+drafted and sent rows. Dashboard projections are available at GET /dashboard/outreach;
+dashboard email dispatch uses POST /dashboard/outreach/send or
+POST /dashboard/jobs/{job_id}/send-email.
+
+Contact discovery now reads supported LinkedIn/Naukri job pages in the existing
+authorized browser profile when one is connected. HTTP denial, login, CAPTCHA,
+OTP, redirected jobs, and verification stop that host without retrying through a
+different transport. Without saved authorization it can read only public HTML.
+Empty JavaScript shells are marked FAILED instead of reported as completed searches.
+The table displays pending, blocked, failed, and no-public-contact outcomes.
+
+Named recruiter cards and explicitly published HR/careers mailboxes in job
+descriptions are supported. Shared inboxes display as Recruitment team / Public
+recruitment mailbox; they are never labelled as a named HR employee. No personal
+mailboxes, inferred email patterns, support addresses, or unrelated employees are
+added. A name-only record enriched with a verified email retains the email's source.
+
+Public employer pages already identified by a publisher are followed as before.
+`config/company_contact_sources.json` adds independently verified public employer
+URLs for specific company names. It contains URLs, not guessed addresses. These
+independent sources can still be checked when a job portal is blocked, with the
+partial-discovery restriction preserved in the audit. This is not a general search
+engine or a guarantee that every company publishes a recruiter address.

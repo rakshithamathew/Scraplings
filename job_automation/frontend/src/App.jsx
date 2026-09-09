@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
-const FILTERS = ["ALL", "QUALIFIED", "NEEDS_REVIEW", "APPLIED"];
+const FILTERS = ["ALL", "QUALIFIED", "APPLIED", "EMAIL_FOUND", "EMAIL_SENT"];
 const PAGE_SIZES = [5, 10, 12];
 const SCORE_FILTERS = [
   { label: "All scores", value: "" },
@@ -10,7 +10,7 @@ const SCORE_FILTERS = [
   { label: "80+", value: "80" },
   { label: "90+", value: "90" },
 ];
-const EMPTY_STATS = { total_jobs: 0, qualified: 0, needs_review: 0, applied: 0 };
+const EMPTY_STATS = { total_jobs: 0, qualified: 0, applied: 0, contacts_found: 0, emails_sent: 0, linkedin_messages_sent: 0 };
 const CONNECTION_PLATFORMS = ["linkedin", "naukri", "indeed"];
 
 async function api(path, options = {}) {
@@ -58,6 +58,7 @@ function App() {
   const [selectedJobIds, setSelectedJobIds] = useState(() => new Set());
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [draftPreview, setDraftPreview] = useState(null);
   const fileInputRef = useRef(null);
   const tableViewportRef = useRef(null);
 
@@ -65,21 +66,16 @@ function App() {
     setBusy("refresh");
     setError("");
     try {
-      const query = activeFilter === "ALL"
-        ? "?limit=2000"
-        : activeFilter === "NEEDS_REVIEW"
-          ? "?needs_review=true&limit=2000"
-          : activeFilter === "QUALIFIED"
-            ? "?status=QUALIFIED&exclude_needs_review=true&limit=2000"
-            : `?status=${activeFilter}&limit=2000`;
-      const [nextJobs, nextStats, nextResume, nextConnections] = await Promise.all([
-        api(`/jobs${query}`),
+      const [nextJobs, nextStats, nextResume, nextConnections, outreach] = await Promise.all([
+        api("/jobs?limit=2000"),
         api("/stats"),
         api("/resume").catch((requestError) => requestError.status === 404 ? null : Promise.reject(requestError)),
         api("/connections"),
+        api("/dashboard/outreach"),
       ]);
-      setJobs(nextJobs);
-      setStats(nextStats);
+      const contacts = new Map(outreach.jobs.map((row) => [row.job_id, row]));
+      setJobs(nextJobs.map((job) => ({ ...job, ...contacts.get(job.id) })));
+      setStats({ ...nextStats, contacts_found: outreach.contacts_found, emails_sent: outreach.emails_sent, linkedin_messages_sent: outreach.linkedin_messages_sent });
       setResume(nextResume);
       setConnections(nextConnections);
     } catch (requestError) {
@@ -101,11 +97,13 @@ function App() {
 
   const locationKey = locationFilter.trim().toLocaleLowerCase();
   const filteredJobs = jobs.filter((job) => {
+    const statusMatches = filter === "ALL" || (filter === "EMAIL_FOUND" ? Boolean(job.public_work_email)
+      : filter === "EMAIL_SENT" ? job.email_status === "SENT" : job.status === filter);
     const scoreMatches = minimumScore === ""
       || (job.match_score != null && job.match_score >= Number(minimumScore));
     const locationMatches = !locationKey
       || (job.location || "").toLocaleLowerCase().includes(locationKey);
-    return scoreMatches && locationMatches;
+    return statusMatches && scoreMatches && locationMatches;
   });
   const pageSize = pageSizeChoice === "AUTO" ? autoPageSize : Number(pageSizeChoice);
   const totalPages = Math.max(1, Math.ceil(filteredJobs.length / pageSize));
@@ -141,12 +139,19 @@ function App() {
     setError("");
     setMessage("");
     try {
-      const options = name === "apply"
+      const options = name === "apply" && selectedJobIds.size
         ? { method: "POST", body: JSON.stringify({ job_ids: [...selectedJobIds] }) }
         : { method: "POST" };
       const result = await api(path, options);
       if (name === "scrape") setMessage(`Scrape complete: ${result.new_jobs} new, ${result.jobs_scored} scored.`);
       else if (name === "score") setMessage(`Scoring complete: ${result.jobs_scored} scored, ${result.qualified} qualified.`);
+      else if (name === "contacts") setMessage(`Contact discovery complete: ${result.contacts_saved} saved, ${result.duplicates} already saved, ${result.blocked} blocked, ${result.failed} failed.`);
+      else if (name === "outreach") {
+        const items = result.results || [result];
+        const reason = items.find((item) => item.configuration_error)?.configuration_error
+          || (items.some((item) => item.rate_limited) ? "Remaining emails are rate limited; try again later." : "");
+        setMessage(`${result.sent} emails sent. ${reason || (result.sent ? "" : "No send completed; check contact, draft inputs, and delivery status.")}`);
+      }
       else if (name === "pipeline") setMessage(`${result.dry_run ? "Dry run" : "Automation"} complete: ${result.jobs_discovered} discovered, ${result.jobs_ats_over_70} ATS > 70, ${result.jobs_applied} applied, ${result.emails_sent} emails sent, ${result.linkedin_messages_sent} LinkedIn messages sent, ${result.jobs_skipped} skipped. ${result.errors || 0} stage errors.`);
       else if (result.eligible === 0) {
         setMessage(`None of the ${result.selected} selected jobs are currently eligible.`);
@@ -159,6 +164,21 @@ function App() {
       setError(requestError.message);
       setBusy("");
     }
+  }
+
+  async function draftEmail(job) {
+    setBusy(`draft-${job.id}`);
+    setError("");
+    setDraftPreview(null);
+    try {
+      await api(`/jobs/${job.id}/outreach/generate`, { method: "POST" });
+      const draft = await api(`/jobs/${job.id}/outreach`);
+      if (draft.status === "DRAFTED") setDraftPreview({ ...draft, company: job.company });
+      setMessage(draft.status === "DRAFTED" ? `Personalized draft saved for ${job.company}.` : draft.missing_inputs.join("; "));
+      await refresh(filter);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally { setBusy(""); }
   }
 
   async function uploadResume(event) {
@@ -210,10 +230,11 @@ function App() {
         <div className="toolbar" aria-label="Job actions">
           <input ref={fileInputRef} className="file-input" type="file" accept=".pdf,.docx" onChange={uploadResume} />
           <button className="button secondary" onClick={() => fileInputRef.current?.click()} disabled={Boolean(busy)}>{busy === "resume" ? "Uploading..." : "Upload Resume"}</button>
-          <button className="button" onClick={() => runAction("scrape", "/scrape")} disabled={Boolean(busy)}>Run Scraper</button>
+          <button className="button" onClick={() => runAction("scrape", "/scrape?score_jobs=false")} disabled={Boolean(busy)}>Run Scraper</button>
           <button className="button" onClick={() => runAction("score", "/score")} disabled={Boolean(busy)}>Run Scoring</button>
-          <button className="button" onClick={() => runAction("apply", "/applications/run")} disabled={Boolean(busy) || selectedJobIds.size === 0}>Auto Apply Selected ({selectedJobIds.size})</button>
-          <button className="button" onClick={() => runAction("pipeline", "/automation/run")} disabled={Boolean(busy) || !resume} title="Discover jobs, apply, and send outreach after confirmed submission">Run Full Automation</button>
+          <button className="button" onClick={() => runAction("contacts", "/contacts/discover?qualified_only=true")} disabled={Boolean(busy)}>Find Contacts</button>
+          <button className="button" onClick={() => runAction("apply", "/applications/run")} disabled={Boolean(busy) || !resume}>Auto Apply{selectedJobIds.size ? ` (${selectedJobIds.size})` : ""}</button>
+          <button className="button" onClick={() => runAction("outreach", "/dashboard/outreach/send")} disabled={Boolean(busy) || !resume}>Send Outreach</button>
           <button className="button secondary" onClick={() => refresh(filter)} disabled={Boolean(busy)}>Refresh</button>
         </div>
       </header>
@@ -239,8 +260,10 @@ function App() {
       <section className="summary" aria-label="Job summary">
         <div><span>Total Jobs</span><strong>{stats.total_jobs}</strong></div>
         <div><span>Qualified</span><strong>{stats.qualified}</strong></div>
-        <div><span>Needs Review</span><strong>{stats.needs_review}</strong></div>
         <div><span>Applied</span><strong>{stats.applied}</strong></div>
+        <div><span>Contacts Found</span><strong>{stats.contacts_found}</strong></div>
+        <div><span>Emails Sent</span><strong>{stats.emails_sent}</strong></div>
+        <div><span>LinkedIn Messages Sent</span><strong>{stats.linkedin_messages_sent}</strong></div>
       </section>
 
       <nav className="filters" aria-label="Filter jobs by status">
@@ -263,6 +286,12 @@ function App() {
 
       {message && <p className="notice success" role="status">{message}</p>}
       {error && <p className="notice error" role="alert">{error}</p>}
+      {busy && <p className="activity" role="status">{busy.startsWith("draft-") ? "Drafting email" : formatStatus(busy)} in progress...</p>}
+      {draftPreview && <section className="draft-preview" aria-label="Email draft">
+        <button className="text-button" onClick={() => setDraftPreview(null)}>Close draft</button>
+        <strong>{draftPreview.email_subject}</strong>
+        <p>{draftPreview.email_body}</p>
+      </section>}
 
       <section className="table-card" aria-label="Jobs">
         <div className="table-scroll" ref={tableViewportRef}>
@@ -273,7 +302,7 @@ function App() {
                 selectableVisibleJobs.forEach((job) => allVisibleSelected ? next.delete(job.id) : next.add(job.id));
                 return next;
               });
-            }} /></th><th>Score</th><th>Company</th><th>Job Title</th><th>Location</th><th>Work Type</th><th>Source</th><th>Status</th><th>Resume</th><th>Applied Date</th><th>Application Link</th></tr></thead>
+            }} /></th><th>Score</th><th>Company</th><th>Job Title</th><th>Location</th><th>Status</th><th>Recruiter / Contact</th><th>Role</th><th>Email</th><th>LinkedIn</th><th>Email Status</th><th>LinkedIn Status</th><th>Applied Date</th><th>Actions</th></tr></thead>
             <tbody>
               {visibleJobs.map((job) => <tr key={job.id}>
                 <td className="select-column"><input type="checkbox" aria-label={`Select ${job.title} at ${job.company}`} checked={selectedJobIds.has(job.id)} disabled={job.status !== "QUALIFIED" || job.application_status === "NEEDS_REVIEW" || Boolean(job.review_reason) || job.match_score == null || job.match_score <= 70 || !job.application_url} onChange={() => setSelectedJobIds((current) => {
@@ -282,18 +311,28 @@ function App() {
                   return next;
                 })} /></td>
                 <td className="score" title={job.score_reason || ""}>{job.match_score == null ? "-" : Math.round(job.match_score)}</td>
-                <td>{job.company}</td><td className="job-title">{job.title}</td><td>{job.location || "-"}</td>
-                <td>{formatStatus(job.workplace_type || "UNKNOWN")}</td><td className="source">{job.source}</td>
+                <td>{job.company}</td><td className="job-title"><a href={job.application_url} target="_blank" rel="noreferrer">{job.title}</a></td><td>{job.location || "-"}</td>
                 <td>{(() => {
                   const displayedStatus = job.application_status === "NEEDS_REVIEW" || job.review_reason
                     ? "NEEDS_REVIEW"
                     : job.status;
                   return <span className={`status status-${displayedStatus.toLowerCase()}`} title={job.review_reason || ""}>{formatStatus(displayedStatus)}</span>;
                 })()}</td>
-                <td>{job.resume_used || job.recommended_resume || "-"}</td><td>{formatDate(job.applied_at)}</td>
-                <td><a href={job.application_url} target="_blank" rel="noreferrer">Open Application</a></td>
+                <td title={job.contact_source || job.discovery_detail || ""}>{job.contact_name || "Not found"}{!job.contact_name && <small className="delivery-note" title={job.discovery_detail || ""}>{job.discovery_status === "BLOCKED" ? "Access blocked" : job.discovery_status === "FAILED" ? "Discovery failed" : job.discovery_status === "COMPLETE" ? "No public contact found" : "Discovery pending"}</small>}</td>
+                <td>{job.contact_role || "-"}</td>
+                <td>{job.public_work_email || "Not found"}</td>
+                <td>{job.linkedin_url ? <a href={job.linkedin_url} target="_blank" rel="noreferrer">Profile</a> : "Not found"}</td>
+                <td><span className={`status status-${(job.email_status || "NOT_FOUND").toLowerCase()}`} title={job.email_detail || ""}>{job.email_status || "NOT_FOUND"}</span>{job.email_attempted && job.email_status !== "SENT" && <small className="delivery-note">Attempt recorded; review required</small>}</td>
+                <td><span className={`status status-${(job.linkedin_status || "NOT_FOUND").toLowerCase()}`} title={job.linkedin_detail || ""}>{job.linkedin_status || "NOT_FOUND"}</span></td>
+                <td>{formatDate(job.applied_at)}</td>
+                <td><div className="row-actions">
+                  <button className="text-button" disabled={Boolean(busy)} onClick={() => runAction("contacts", `/jobs/${job.id}/contacts/discover`)}>Find Contact</button>
+                  <button className="text-button" disabled={Boolean(busy) || !resume || !job.contact_id || !["QUALIFIED", "APPLIED"].includes(job.status)} onClick={() => draftEmail(job)}>Draft Email</button>
+                  <button className="text-button" title="Requires a confirmed application and a public work email" disabled={Boolean(busy) || !resume || job.status !== "APPLIED" || !job.application_confirmed || !job.public_work_email || job.email_attempted || !(job.match_score > 70)} onClick={() => runAction("outreach", `/dashboard/jobs/${job.id}/send-email`)}>Send Email</button>
+                  {job.linkedin_url ? <a href={job.linkedin_url} target="_blank" rel="noreferrer">Open LinkedIn</a> : <button className="text-button" disabled>Open LinkedIn</button>}
+                </div></td>
               </tr>)}
-              {!filteredJobs.length && <tr><td className="empty" colSpan="11">No jobs match this filter.</td></tr>}
+              {!filteredJobs.length && <tr><td className="empty" colSpan="14">No jobs match this filter.</td></tr>}
             </tbody>
           </table>
         </div>

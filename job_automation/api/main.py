@@ -362,12 +362,14 @@ async def upload_resume(
 
 
 @router.post("/scrape", response_model=DiscoveryResponse)
-async def scrape(request: Request, repository: RepositoryDependency) -> DiscoveryResponse:
+async def scrape(request: Request, repository: RepositoryDependency, score_jobs: bool = True) -> DiscoveryResponse:
     try:
         parsed, resume_path = _active_profile(repository)
         sources = request.app.state.sources_loader()
         service = request.app.state.discovery_service_factory(repository, parsed.to_user_profile())
         summary = await service.run(sources)
+        if not score_jobs:
+            return DiscoveryResponse(**asdict(summary))
         ranked = rank_jobs(repository, parsed.to_user_profile(), resume_path)
         return DiscoveryResponse(**asdict(summary), jobs_scored=len(ranked), qualified=sum(
             item.job.status is JobStatus.QUALIFIED for item in ranked
@@ -437,11 +439,22 @@ def list_job_contacts(job_id: int, repository: RepositoryDependency) -> list[dic
 
 
 @router.post("/contacts/discover")
-async def discover_pending_contacts(repository: RepositoryDependency) -> dict[str, Any]:
+async def discover_pending_contacts(repository: RepositoryDependency, qualified_only: bool = False) -> dict[str, Any]:
     from dataclasses import asdict
     from job_automation.outreach.discovery import ContactDiscoveryService
 
-    return asdict(await ContactDiscoveryService(repository).run())
+    service = ContactDiscoveryService(repository)
+    if qualified_only:
+        from job_automation.outreach.discovery import ContactDiscoverySummary
+        summary = ContactDiscoverySummary()
+        for job in repository.get_jobs(min_score=70):
+            if job.match_score <= 70 or job.status not in {JobStatus.QUALIFIED, JobStatus.APPLIED}:
+                continue
+            result = asdict(await service.run(job.id))
+            for key, value in result.items():
+                setattr(summary, key, getattr(summary, key) + value)
+        return asdict(summary)
+    return asdict(await service.run())
 
 
 @router.post("/jobs/{job_id}/contacts/discover")
@@ -482,7 +495,7 @@ def generate_job_outreach(job_id: int, request: Request, repository: RepositoryD
     if repository.get_job(job_id) is None:
         raise HTTPException(status_code=404, detail="Job not found")
     try:
-        return asdict(PersonalizedOutreachService(repository, project_root=request.app.state.project_root).run(job_id))
+        return asdict(PersonalizedOutreachService(repository, project_root=request.app.state.project_root).run(job_id, allow_applied=True))
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
@@ -506,6 +519,40 @@ def send_job_outreach(job_id: int, request: Request, repository: RepositoryDepen
 @router.get("/outreach/email-status")
 def outreach_email_status(request: Request, job_id: int | None = None) -> list[dict[str, Any]]:
     return request.app.state.outreach_email_service.deliveries(job_id)
+
+
+@router.get("/dashboard/outreach")
+def dashboard_outreach(repository: RepositoryDependency) -> dict[str, Any]:
+    from job_automation.outreach.dashboard import outreach_dashboard
+    return outreach_dashboard(repository)
+
+
+@router.post("/dashboard/jobs/{job_id}/send-email")
+def dashboard_send_email(job_id: int, request: Request, repository: RepositoryDependency) -> dict[str, Any]:
+    job = repository.get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job.status is not JobStatus.APPLIED or not (job.application_confirmation or job.external_application_id):
+        raise HTTPException(status_code=400, detail="Email outreach requires a confirmed application")
+    return asdict(request.app.state.outreach_email_service.run(job_id))
+
+
+@router.post("/dashboard/outreach/send")
+def dashboard_send_outreach(request: Request, repository: RepositoryDependency) -> dict[str, Any]:
+    results = []
+    sent = 0
+    for job in repository.get_jobs(status=JobStatus.APPLIED, min_score=70):
+        if job.match_score <= 70 or not (job.application_confirmation or job.external_application_id):
+            continue
+        try:
+            result = dashboard_send_email(job.id, request, repository)
+            results.append({'job_id': job.id, **result})
+            sent += result['sent']
+            if result['rate_limited'] or result['configuration_error']:
+                break
+        except Exception:
+            results.append({'job_id': job.id, 'error': 'Email unavailable; remaining jobs continue'})
+    return {'sent': sent, 'results': results}
 
 
 @router.post("/outreach/linkedin/send")

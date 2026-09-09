@@ -58,6 +58,8 @@ class ContactRepository:
                     existing.linkedin_url = contact.linkedin_url
                 if not existing.work_email:
                     existing.work_email = contact.work_email
+                    if contact.work_email:
+                        existing.source, existing.evidence = contact.source, contact.evidence
                 return False
             statement = insert(JobContact).values(job_id=job_id, identity_key=identity, **values).on_conflict_do_nothing()
             return session.execute(statement).rowcount == 1

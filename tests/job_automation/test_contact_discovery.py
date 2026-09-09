@@ -126,6 +126,76 @@ def test_identity_enrichment_and_company_guard(repository):
     with pytest.raises(ValueError, match='company'):
         repo.save(current.id, contact.model_copy(update={'company': 'Other'}))
 
+
+def test_naukri_poster_and_literal_public_email(repository):
+    current = job(repository)
+    url = 'https://www.naukri.com/job-listings-example'
+    html = '''<div class="recruiter-info"><span class="recruiter-name">Robin Recruiter</span>
+    <span class="recruiter-designation">HR Recruiter</span><a href="mailto:robin@example.com">Email recruiter</a></div>'''
+    found, _ = PublicContactScraper().parse(current, make_response(url, html), url, job_page=True)
+    assert len(found) == 1
+    assert found[0].name == 'Robin Recruiter' and found[0].work_email == 'robin@example.com'
+    assert found[0].priority == 1
+
+
+def test_shared_hiring_mailbox_is_not_an_invented_person(repository):
+    current = job(repository)
+    html = '''<div class="job-desc">To apply, send your CV to careers@example.com.</div>
+    <footer>Support: support@example.com. Careers contact: hr@unrelated.com</footer>'''
+    found, _ = PublicContactScraper().parse(current, make_response(current.source_url, html), current.source_url, job_page=True)
+    assert len(found) == 1 and found[0].work_email == 'careers@example.com'
+    assert found[0].title == 'Public recruitment mailbox'
+    assert found[0].linkedin_url is None
+
+
+@pytest.mark.asyncio
+async def test_empty_portal_shell_is_not_reported_complete(repository):
+    current = job(repository)
+    scraper = PublicContactScraper()
+    async def fetch(url):
+        return make_response(url, '<div id="root"></div>')
+    scraper.fetch = fetch
+    found, status, detail = await scraper.discover(current)
+    assert not found and status == 'FAILED'
+    assert 'No readable job description' in detail
+
+
+@pytest.mark.asyncio
+async def test_authorized_reader_block_never_falls_back_to_http(monkeypatch):
+    import socket
+    monkeypatch.setattr(socket, 'getaddrinfo', lambda *args, **kwargs: [(socket.AF_INET, socket.SOCK_STREAM, 6, '', ('93.184.216.34', 443))])
+    calls = []
+    class Reader:
+        def available(self, url):
+            return True
+        async def read(self, url, timeout):
+            calls.append(url)
+            raise AccessBlocked('HTTP 403')
+    async def http(*args, **kwargs):
+        raise AssertionError('Must not retry using another transport')
+    monkeypatch.setattr('job_automation.outreach.discovery.AsyncFetcher.get', http)
+    scraper = PublicContactScraper(request_delay=0, portal_reader=Reader())
+    for _ in range(2):
+        with pytest.raises(AccessBlocked):
+            await scraper.fetch('https://www.naukri.com/job-listings-example')
+    assert len(calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_blocked_portal_does_not_hide_independent_verified_company_source(repository):
+    current = job(repository)
+    scraper = PublicContactScraper(company_sources={current.company: ['https://example.com/careers']})
+    async def fetch(url):
+        if 'linkedin.com' in url:
+            raise AccessBlocked('Sign in required')
+        return make_response(url, '<main>To apply, send your resume to careers@example.com.</main>')
+    scraper.fetch = fetch
+    found, status, detail = await scraper.discover(current)
+    assert status == 'BLOCKED'  # Preserve partial-discovery restriction.
+    assert len(found) == 1 and found[0].work_email == 'careers@example.com'
+    assert found[0].source == 'https://example.com/careers'
+    assert '1 published work emails' in detail
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize('status,html', [(403, ''), (429, ''), (302, ''), (200, 'Verify you are human')])
 async def test_fetch_stops_blocked_host_without_retry(monkeypatch, status, html):
