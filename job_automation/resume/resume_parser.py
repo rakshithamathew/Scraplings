@@ -65,7 +65,7 @@ class ParsedCandidateProfile(BaseModel):
     keywords: list[str] = Field(default_factory=list)
     resume_text: str = ""
 
-    def to_user_profile(self) -> UserProfile:
+    def to_user_profile(self, *, clinical_systems_only: bool = False) -> UserProfile:
         """Adapt extracted facts to the existing deterministic ATS scorer."""
         combined_skills = list(dict.fromkeys((*self.skills, *self.technologies)))
         years = int(self.years_of_experience) if self.years_of_experience is not None else None
@@ -85,6 +85,7 @@ class ParsedCandidateProfile(BaseModel):
             related_titles.extend(["Full Stack Developer", "Software Developer", "Software Engineer"])
         target_titles = list(dict.fromkeys((*target_titles, *related_titles)))
         return UserProfile(
+            clinical_systems_only=clinical_systems_only,
             target_titles=target_titles,
             skills=combined_skills,
             preferred_skills=[],
@@ -99,6 +100,9 @@ class ParsedCandidateProfile(BaseModel):
 
 
 def _clean_line(value: str) -> str:
+    # PDF font spacing can split the initial letter in these CV technologies.
+    value = re.sub(r"\bT\s+ypeScript\b", "TypeScript", value, flags=re.I)
+    value = re.sub(r"\bT\s+ailwind\b", "Tailwind", value, flags=re.I)
     return _SPACE.sub(" ", value).strip(" \t\r\n|•·-–—")
 
 

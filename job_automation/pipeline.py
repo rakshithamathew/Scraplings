@@ -109,7 +109,7 @@ class AutomationPipeline:
                     self._save(summary, results)
             try:
                 active, path = self._cv()
-                profile = parse_resume(path).to_user_profile()
+                profile = parse_resume(path).to_user_profile(clinical_systems_only=True)
                 discovery = await stage(None, 'discovery',
                     lambda: self.discovery_factory(self.repository, profile=profile).run(sources), asynchronous=True)
                 if discovery:

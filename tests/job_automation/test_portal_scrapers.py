@@ -97,3 +97,20 @@ async def test_portal_scrapers_fail_closed_when_no_public_results(monkeypatch: p
     monkeypatch.setattr(naukri, "_render", no_response)
     assert await linkedin.search_jobs() == []
     assert await naukri.search_jobs() == []
+
+
+@pytest.mark.asyncio
+async def test_naukri_detail_page_uses_detail_wait_and_explicit_hybrid_mode(monkeypatch):
+    scraper = NaukriScraper(request_delay=0)
+
+    async def fake_render(url, *, detail=False):
+        assert detail
+        return make_response(url, '<h1>Frontend Engineer</h1><div class="work-mode">Hybrid</div>'
+            '<div class="job-desc">Build clinical systems with React and TypeScript.</div>')
+
+    monkeypatch.setattr(scraper, "_render", fake_render)
+    job = scraper.normalize({"application_url": "https://www.naukri.com/job/clinical-123456789012",
+                             "location": "Bengaluru"})
+    result = await scraper.get_job_details(job)
+    assert result.description_complete
+    assert result.workplace_type is WorkplaceType.HYBRID

@@ -5,14 +5,16 @@
       "company": "Greenhouse",
       "url": "https://job-boards.greenhouse.io/greenhouse",
       "limit": 100,
-      "request_delay": 0.5
+      "request_delay": 0.5,
+      "enabled": false
     },
     {
       "type": "lever",
       "company": "Lever Demo",
       "url": "https://jobs.lever.co/leverdemo",
       "limit": 100,
-      "request_delay": 0.5
+      "request_delay": 0.5,
+      "enabled": false
     },
     {
       "type": "linkedin",
@@ -23,18 +25,15 @@
       "request_delay": 2,
       "options": {
         "queries": [
-          "Frontend Developer",
-          "Senior Frontend Developer",
-          "React.js Developer",
-          "React Engineer",
-          "Software Engineer",
-          "Senior Software Engineer",
-          "Full Stack Developer",
-          "Frontend Lead"
+          "React clinical software developer",
+          "Angular EHR developer",
+          "Node.js patient records developer",
+          "Python telehealth developer"
         ],
         "searches": [
           {
-            "location": "Bengaluru, Karnataka, India"
+            "location": "Bengaluru, Karnataka, India",
+            "hybrid": true
           },
           {
             "location": "Worldwide",
@@ -55,15 +54,15 @@
       "request_delay": 3,
       "options": {
         "queries": [
-          "Frontend Developer",
-          "Angular Developer",
-          "React JS Developer",
-          "Software Developer",
-          "Software Engineer"
+          "React clinical software developer",
+          "Angular EHR developer",
+          "Node.js patient records developer",
+          "Python telehealth developer"
         ],
         "searches": [
           {
-            "location": "Bengaluru"
+            "location": "Bengaluru",
+            "hybrid": true
           },
           {
             "location": "Remote",

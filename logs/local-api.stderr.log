@@ -1,0 +1,1774 @@
+INFO:     Started server process [7996]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+[2026-09-17 20:59:27] ERROR: Failed after 1 attempts: Failed to perform, curl: (7) Failed to connect to www.linkedin.com:443 after 45 ms: Could not connect to server. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+Unable to fetch LinkedIn public page: https://www.linkedin.com/jobs/search/?keywords=React+clinical+software+developer&location=Bengaluru%2C+Karnataka%2C+India&start=0&f_WT=3
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\curl_cffi\requests\session.py", line 1512, in _request_once
+    await task
+curl_cffi.curl.CurlError: Failed to perform, curl: (7) Failed to connect to www.linkedin.com:443 after 45 ms: Could not connect to server. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\linkedin.py", line 78, in _fetch
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\static.py", line 476, in _make_request
+    response = await session.request(method, **request_args)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\curl_cffi\requests\session.py", line 1585, in request
+    return await self._request_once(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<36 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\curl_cffi\requests\session.py", line 1519, in _request_once
+    raise error(str(e), e.code, rsp) from e
+curl_cffi.requests.exceptions.ConnectionError: Failed to perform, curl: (7) Failed to connect to www.linkedin.com:443 after 45 ms: Could not connect to server. See https://curl.se/libcurl/c/libcurl-errors.html first for more details.
+Job source failed: type=linkedin company= url=https://www.linkedin.com/jobs/search/
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\service.py", line 351, in run
+    returned = await scraper.search_jobs(limit=source.limit)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\linkedin.py", line 190, in search_jobs
+    response = await self._fetch(url)
+               ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\linkedin.py", line 90, in _fetch
+    raise RuntimeError("LinkedIn public page request failed") from None
+RuntimeError: LinkedIn public page request failed
+[2026-09-17 20:59:44] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 20:59:45] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 20:59:46] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=React+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+[2026-09-17 20:59:58] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+clinical+software+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+clinical+software+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 20:59:59] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+clinical+software+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+clinical+software+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:00:00] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+clinical+software+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+clinical+software+developer&l=Remote", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=React+clinical+software+developer&l=Remote
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+clinical+software+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+clinical+software+developer&l=Remote", waiting until "load"
+
+[2026-09-17 21:00:11] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:00:12] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:00:13] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=React+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+[2026-09-17 21:00:25] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+EHR+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+EHR+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:00:26] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+EHR+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+EHR+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:00:27] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+EHR+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+EHR+developer&l=Remote", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=React+EHR+developer&l=Remote
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+EHR+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+EHR+developer&l=Remote", waiting until "load"
+
+[2026-09-17 21:00:39] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:00:40] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:00:41] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=React+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+[2026-09-17 21:00:53] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+patient+records+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+patient+records+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:00:54] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+patient+records+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+patient+records+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:00:55] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+patient+records+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+patient+records+developer&l=Remote", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=React+patient+records+developer&l=Remote
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+patient+records+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+patient+records+developer&l=Remote", waiting until "load"
+
+[2026-09-17 21:01:07] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:01:08] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:01:09] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=React+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+[2026-09-17 21:01:21] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+telehealth+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+telehealth+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:01:22] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+telehealth+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+telehealth+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:01:23] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+telehealth+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+telehealth+developer&l=Remote", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=React+telehealth+developer&l=Remote
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=React+telehealth+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=React+telehealth+developer&l=Remote", waiting until "load"
+
+[2026-09-17 21:01:35] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:01:36] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:01:37] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=Angular+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+[2026-09-17 21:01:48] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+clinical+software+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+clinical+software+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:01:50] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+clinical+software+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+clinical+software+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:01:51] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+clinical+software+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+clinical+software+developer&l=Remote", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=Angular+clinical+software+developer&l=Remote
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+clinical+software+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+clinical+software+developer&l=Remote", waiting until "load"
+
+[2026-09-17 21:02:02] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:02:03] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:02:04] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=Angular+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+[2026-09-17 21:02:16] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+EHR+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+EHR+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:02:17] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+EHR+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+EHR+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:02:18] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+EHR+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+EHR+developer&l=Remote", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=Angular+EHR+developer&l=Remote
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+EHR+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+EHR+developer&l=Remote", waiting until "load"
+
+[2026-09-17 21:02:30] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:02:31] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:02:32] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=Angular+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+[2026-09-17 21:02:43] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+patient+records+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+patient+records+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:02:45] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+patient+records+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+patient+records+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:02:46] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+patient+records+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+patient+records+developer&l=Remote", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=Angular+patient+records+developer&l=Remote
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+patient+records+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+patient+records+developer&l=Remote", waiting until "load"
+
+[2026-09-17 21:02:57] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:02:58] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:02:59] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=Angular+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+[2026-09-17 21:03:11] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+telehealth+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+telehealth+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:03:12] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+telehealth+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+telehealth+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:03:13] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+telehealth+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+telehealth+developer&l=Remote", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=Angular+telehealth+developer&l=Remote
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Angular+telehealth+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Angular+telehealth+developer&l=Remote", waiting until "load"
+
+[2026-09-17 21:03:24] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:03:26] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:03:27] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=Node.js+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+[2026-09-17 21:03:38] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+clinical+software+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+clinical+software+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:03:39] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+clinical+software+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+clinical+software+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:03:40] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+clinical+software+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+clinical+software+developer&l=Remote", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=Node.js+clinical+software+developer&l=Remote
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+clinical+software+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+clinical+software+developer&l=Remote", waiting until "load"
+
+[2026-09-17 21:03:52] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:03:53] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:03:54] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=Node.js+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+[2026-09-17 21:04:06] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+EHR+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+EHR+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:04:07] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+EHR+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+EHR+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:04:08] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+EHR+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+EHR+developer&l=Remote", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=Node.js+EHR+developer&l=Remote
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+EHR+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+EHR+developer&l=Remote", waiting until "load"
+
+[2026-09-17 21:04:20] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:04:21] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:04:22] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=Node.js+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+[2026-09-17 21:04:34] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+patient+records+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+patient+records+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:04:35] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+patient+records+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+patient+records+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:04:36] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+patient+records+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+patient+records+developer&l=Remote", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=Node.js+patient+records+developer&l=Remote
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+patient+records+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+patient+records+developer&l=Remote", waiting until "load"
+
+[2026-09-17 21:04:47] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:04:48] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:04:50] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=Node.js+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+[2026-09-17 21:05:01] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+telehealth+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+telehealth+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:05:02] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+telehealth+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+telehealth+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:05:03] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+telehealth+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+telehealth+developer&l=Remote", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=Node.js+telehealth+developer&l=Remote
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Node.js+telehealth+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Node.js+telehealth+developer&l=Remote", waiting until "load"
+
+[2026-09-17 21:05:15] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:05:16] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:05:17] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=Python+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+clinical+software+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+[2026-09-17 21:05:29] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+clinical+software+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+clinical+software+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:05:30] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+clinical+software+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+clinical+software+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:05:31] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+clinical+software+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+clinical+software+developer&l=Remote", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=Python+clinical+software+developer&l=Remote
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+clinical+software+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+clinical+software+developer&l=Remote", waiting until "load"
+
+[2026-09-17 21:05:42] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:05:44] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:05:45] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=Python+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+EHR+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+[2026-09-17 21:05:56] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+EHR+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+EHR+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:05:58] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+EHR+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+EHR+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:05:59] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+EHR+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+EHR+developer&l=Remote", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=Python+EHR+developer&l=Remote
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+EHR+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+EHR+developer&l=Remote", waiting until "load"
+
+[2026-09-17 21:06:10] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:06:11] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:06:12] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=Python+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+patient+records+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+[2026-09-17 21:06:24] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+patient+records+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+patient+records+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:06:25] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+patient+records+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+patient+records+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:06:26] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+patient+records+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+patient+records+developer&l=Remote", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=Python+patient+records+developer&l=Remote
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+patient+records+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+patient+records+developer&l=Remote", waiting until "load"
+
+[2026-09-17 21:06:38] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:06:39] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:06:40] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=Python+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+telehealth+developer+hybrid&l=Bengaluru%2C+Karnataka%2C+India", waiting until "load"
+
+[2026-09-17 21:06:52] WARNING: Attempt 1 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+telehealth+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+telehealth+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:06:53] WARNING: Attempt 2 failed: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+telehealth+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+telehealth+developer&l=Remote", waiting until "load"
+. Retrying in 1s...
+[2026-09-17 21:06:54] ERROR: Failed after 3 attempts: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+telehealth+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+telehealth+developer&l=Remote", waiting until "load"
+
+Unable to render public Naukri search: https://www.naukri.com/jobs-in-india?k=Python+telehealth+developer&l=Remote
+Traceback (most recent call last):
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\job_automation\scraper\naukri.py", line 105, in _render
+    response = await asyncio.wait_for(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<9 lines>...
+    )
+    ^
+  File "C:\Users\raksh\AppData\Local\Programs\Python\Python313\Lib\asyncio\tasks.py", line 507, in wait_for
+    return await fut
+           ^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\fetchers\chrome.py", line 94, in async_fetch
+    return await session.fetch(url)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\scrapling\engines\_browsers\_controllers.py", line 351, in fetch
+    first_response = await page.goto(url, referer=referer)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 9869, in goto
+    await self._impl_obj.goto(
+    ...<4 lines>...
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_page.py", line 560, in goto
+    return await self._main_frame.goto(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 156, in goto
+    await self._channel.send(
+        "goto", self._navigation_timeout, locals_to_params(locals())
+    )
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 76, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\raksh\OneDrive\Documents\GitHub\ScraplingAgent\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: Page.goto: net::ERR_NETWORK_ACCESS_DENIED at https://www.naukri.com/jobs-in-india?k=Python+telehealth+developer&l=Remote
+Call log:
+  - navigating to "https://www.naukri.com/jobs-in-india?k=Python+telehealth+developer&l=Remote", waiting until "load"
+
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.
+WARNING:  Unsupported upgrade request.
+WARNING:  No supported WebSocket library detected. Please use "pip install 'uvicorn[standard]'", or install 'websockets' or 'wsproto' manually.

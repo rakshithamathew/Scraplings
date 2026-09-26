@@ -30,8 +30,8 @@ def api(tmp_path: Path) -> tuple[TestClient, JobRepository, dict[str, int]]:
         sha256="a" * 64,
         parsed_profile=ParsedCandidateProfile(
             job_titles=["Python Engineer"],
-            skills=["Python"],
-            technologies=["Python"],
+            skills=["Python", "SQL"],
+            technologies=["Python", "SQL"],
             years_of_experience=3,
             keywords=["backend", "API"],
         ).model_dump(),
@@ -40,8 +40,8 @@ def api(tmp_path: Path) -> tuple[TestClient, JobRepository, dict[str, int]]:
         title="Python Engineer",
         company="Example",
         location="Remote",
-        description="Python backend API role requiring 3 years experience.",
-        skills=["Python"],
+        description="Build clinical systems with Python and SQL backend APIs, requiring 3 years experience.",
+        skills=["Python", "SQL"],
         source="test",
         application_url="https://example.test/jobs/1",
         match_score=85,
@@ -200,6 +200,7 @@ def test_scrape_endpoint_uses_discovery_service(
         def __init__(self, received_repository: JobRepository, profile: UserProfile) -> None:
             assert received_repository is repository
             assert "Python" in profile.skills
+            assert profile.clinical_systems_only
 
         async def run(self, sources: object) -> DiscoverySummary:
             assert sources == ["configured-source"]

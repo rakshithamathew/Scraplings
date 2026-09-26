@@ -93,12 +93,12 @@ class NaukriScraper(BaseJobScraper):
 
     def _search_url(self, query: str, search: Mapping[str, Any], page: int) -> str:
         location = str(search.get("location") or "India")
-        params = urlencode({"k": query, "l": location})
+        params = urlencode({"k": f"{query} hybrid" if search.get("hybrid") else query, "l": location})
         separator = "&" if "?" in self.careers_url else "?"
         url = f"{self.careers_url}{separator}{params}"
         return f"{url}&pageNo={page + 1}" if page else url
 
-    async def _render(self, url: str) -> Selector | None:
+    async def _render(self, url: str, *, detail: bool = False) -> Selector | None:
         if self.request_delay:
             await asyncio.sleep(self.request_delay)
         try:
@@ -108,7 +108,7 @@ class NaukriScraper(BaseJobScraper):
                     headless=True,
                     timeout=int(self.timeout * 1000),
                     wait=self.browser_wait_ms,
-                    wait_selector="div.srp-jobtuple-wrapper",
+                    wait_selector="h1" if detail else "div.srp-jobtuple-wrapper",
                     wait_selector_state="attached",
                 ),
                 timeout=self.timeout + (self.browser_wait_ms / 1000) + 5,
@@ -209,15 +209,27 @@ class NaukriScraper(BaseJobScraper):
         url = existing.application_url or existing.source_url
         if not url:
             return existing
-        response = await self._render(url)
+        response = await self._render(url, detail=True)
         if response is None or self._blocked(response):
             return None
         values = existing.model_dump()
         description = self._all_text(response, "div.styles_JDC__dang-inner-html__h0K4t ::text, .job-desc ::text")
+        work_mode = self._all_text(response, ".styles_jhc__loc___Du2H ::text, .work-mode ::text") or ""
+        mode_text = " ".join((work_mode, description or ""))
+        workplace = existing.workplace_type
+        if re.search(r"\bhybrid\b", work_mode, re.I) or re.search(
+            r"\bhybrid (?:work|role|position|schedule|model)\b|\bwork (?:mode|model):? hybrid\b", mode_text, re.I
+        ):
+            workplace = "HYBRID"
+        elif re.search(r"\b(?:on[- ]?site|in[- ]office)\b", work_mode, re.I):
+            workplace = "ONSITE"
+        elif re.search(r"\b(?:remote|work from home)\b", mode_text, re.I):
+            workplace = "REMOTE"
         values.update(
             title=self._first(response, "h1::text") or existing.title,
             description=description or existing.description,
             description_complete=bool(description),
+            workplace_type=workplace,
             source_url=response.url,
         )
         return self.normalize(values)

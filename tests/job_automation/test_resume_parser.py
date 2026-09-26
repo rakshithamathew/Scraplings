@@ -45,3 +45,14 @@ def test_resume_parser_rejects_unsupported_files(tmp_path: Path) -> None:
     else:
         raise AssertionError("Unsupported resume type was accepted")
 
+
+def test_cv_pdf_spacing_in_technology_names(tmp_path):
+    path = tmp_path / "spaced.docx"
+    document = Document()
+    document.add_paragraph("Technical Skills")
+    document.add_paragraph("React.js, T ypeScript, T ailwind CSS")
+    document.save(path)
+    profile = parse_resume(path)
+    assert "TypeScript" in profile.technologies
+    assert "Tailwind CSS" in profile.technologies
+    assert "FHIR" not in profile.technologies

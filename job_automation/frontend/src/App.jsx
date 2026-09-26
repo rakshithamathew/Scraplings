@@ -143,7 +143,7 @@ function App() {
         ? { method: "POST", body: JSON.stringify({ job_ids: [...selectedJobIds] }) }
         : { method: "POST" };
       const result = await api(path, options);
-      if (name === "scrape") setMessage(`Scrape complete: ${result.new_jobs} new, ${result.jobs_scored} scored.`);
+      if (name === "scrape") setMessage(`Clinical search complete: ${result.remote_eligible + result.bengaluru_hybrid} matched, ${result.filtered} filtered, ${result.failed_sources} source failures.`);
       else if (name === "score") setMessage(`Scoring complete: ${result.jobs_scored} scored, ${result.qualified} qualified.`);
       else if (name === "contacts") setMessage(`Contact discovery complete: ${result.contacts_saved} saved, ${result.duplicates} already saved, ${result.blocked} blocked, ${result.failed} failed.`);
       else if (name === "outreach") {
@@ -223,14 +223,15 @@ function App() {
     <main className="page-shell">
       <header className="page-header">
         <div>
-          <p className="eyebrow">Local workspace</p>
+          <p className="eyebrow">Clinical healthcare systems &middot; CV stack match</p>
           <h1>Job Automation</h1>
+          <p className="active-resume">Bangalore hybrid &middot; Worldwide remote (eligible from India)</p>
           <p className="active-resume">Active Resume: <strong>{resume?.filename || "Not uploaded"}</strong>{resume && <span> · Active</span>}</p>
         </div>
         <div className="toolbar" aria-label="Job actions">
           <input ref={fileInputRef} className="file-input" type="file" accept=".pdf,.docx" onChange={uploadResume} />
           <button className="button secondary" onClick={() => fileInputRef.current?.click()} disabled={Boolean(busy)}>{busy === "resume" ? "Uploading..." : "Upload Resume"}</button>
-          <button className="button" onClick={() => runAction("scrape", "/scrape?score_jobs=false")} disabled={Boolean(busy)}>Run Scraper</button>
+          <button className="button" onClick={() => runAction("scrape", "/scrape?score_jobs=false")} disabled={Boolean(busy) || !resume}>Run Scraper</button>
           <button className="button" onClick={() => runAction("score", "/score")} disabled={Boolean(busy)}>Run Scoring</button>
           <button className="button" onClick={() => runAction("contacts", "/contacts/discover?qualified_only=true")} disabled={Boolean(busy)}>Find Contacts</button>
           <button className="button" onClick={() => runAction("apply", "/applications/run")} disabled={Boolean(busy) || !resume}>Auto Apply{selectedJobIds.size ? ` (${selectedJobIds.size})` : ""}</button>

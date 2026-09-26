@@ -295,7 +295,9 @@ class JobDiscoveryService:
         skip_reason: str | None = None
         if self.profile is not None or job.source == "linkedin":
             decision = evaluate_hard_constraints(
-                job, target_titles=DEFAULT_TITLES if job.source == "linkedin" else self.profile.target_titles
+                job, target_titles=self.profile.target_titles if self.profile else DEFAULT_TITLES,
+                clinical_systems_only=bool(self.profile and self.profile.clinical_systems_only),
+                candidate_skills=self.profile.skills if self.profile else (),
             )
             if decision.eligible and decision.category:
                 setattr(summary, decision.category, getattr(summary, decision.category) + 1)
@@ -326,6 +328,20 @@ class JobDiscoveryService:
 
     async def run(self, sources: Sequence[SourceConfig]) -> DiscoverySummary:
         summary = DiscoverySummary()
+        if self.profile and self.profile.clinical_systems_only:
+            from job_automation.matching.clinical import clinical_queries
+
+            queries = clinical_queries(self.profile.skills)
+            if not queries:
+                raise ValueError("The active CV has no supported development stack for clinical software discovery")
+            sources = [source.model_copy(update={"options": {
+                **source.options,
+                "queries": queries,
+                "searches": [
+                    {"location": "Bengaluru, Karnataka, India", "hybrid": True},
+                    {"location": "Worldwide" if source.type == "linkedin" else "Remote", "remote": True},
+                ],
+            }}) if source.type in {"linkedin", "naukri"} else source for source in sources]
         for source in sources:
             if not source.enabled:
                 continue
@@ -355,6 +371,14 @@ class JobDiscoveryService:
                     else:
                         self.logger.warning("Ignoring non-job result from %s", source.url)
                         continue
+                    if (self.profile and self.profile.clinical_systems_only
+                            and source.type == "naukri" and not job.description_complete):
+                        detailed = await scraper.get_job_details(job)
+                        if detailed is not None and detailed.description_complete:
+                            job = normalize_job(detailed.model_dump())
+                        else:
+                            # A listing snippet is not sufficient clinical-role evidence.
+                            job = job.model_copy(update={"description": None})
                     # A job returned by a successful live listing request is open at
                     # discovery time unless the source explicitly says otherwise.
                     if job.is_open is None:
@@ -440,7 +464,7 @@ async def async_main(args: argparse.Namespace) -> int:
             raise ValueError("Upload an active resume before running discovery and scoring")
         from job_automation.resume import ParsedCandidateProfile
 
-        profile = ParsedCandidateProfile.model_validate(active.parsed_profile).to_user_profile()
+        profile = ParsedCandidateProfile.model_validate(active.parsed_profile).to_user_profile(clinical_systems_only=True)
         summary, _ = await run_complete_cycle(repository, sources, profile, active.path)
     finally:
         engine.dispose()

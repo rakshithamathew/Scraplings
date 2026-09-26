@@ -1,0 +1,57 @@
+INFO:     127.0.0.1:58405 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58405 - "POST /resume/upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63766 - "OPTIONS /jobs?limit=2000 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62843 - "OPTIONS /stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55077 - "OPTIONS /resume HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61870 - "OPTIONS /connections HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56695 - "OPTIONS /dashboard/outreach HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54953 - "GET /resume HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62843 - "GET /stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55077 - "GET /connections HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61870 - "GET /dashboard/outreach HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63766 - "GET /jobs?limit=2000 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63766 - "OPTIONS /scrape?score_jobs=false HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53028 - "GET /resume HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61303 - "GET /stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57454 - "GET /connections HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62236 - "GET /jobs?limit=2000 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49824 - "GET /dashboard/outreach HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61870 - "POST /scrape?score_jobs=false HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60240 - "GET /resume HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59154 - "GET /stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62685 - "GET /connections HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52257 - "GET /dashboard/outreach HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61870 - "GET /jobs?limit=2000 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62448 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60336 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58912 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:62180 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51221 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55655 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55631 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:61156 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:63168 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49927 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49704 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52858 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58724 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55428 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:54802 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:57005 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:63413 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:57935 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56047 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50960 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51060 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:61761 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59641 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52773 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60872 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:64342 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49823 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53939 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:61147 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:64089 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59723 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59711 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58328 - "GET /ws/rooms/incident-001?after=0 HTTP/1.1" 404 Not Found

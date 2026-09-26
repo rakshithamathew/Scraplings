@@ -356,7 +356,7 @@ async def upload_resume(
         sha256=digest,
         parsed_profile=parsed.model_dump(),
     )
-    rank_jobs(repository, parsed.to_user_profile(), relative_path)
+    rank_jobs(repository, parsed.to_user_profile(clinical_systems_only=True), relative_path)
     request.app.state.application_service.refresh_active_resume()
     return _resume_response(active)
 
@@ -366,11 +366,11 @@ async def scrape(request: Request, repository: RepositoryDependency, score_jobs:
     try:
         parsed, resume_path = _active_profile(repository)
         sources = request.app.state.sources_loader()
-        service = request.app.state.discovery_service_factory(repository, parsed.to_user_profile())
+        service = request.app.state.discovery_service_factory(repository, parsed.to_user_profile(clinical_systems_only=True))
         summary = await service.run(sources)
         if not score_jobs:
             return DiscoveryResponse(**asdict(summary))
-        ranked = rank_jobs(repository, parsed.to_user_profile(), resume_path)
+        ranked = rank_jobs(repository, parsed.to_user_profile(clinical_systems_only=True), resume_path)
         return DiscoveryResponse(**asdict(summary), jobs_scored=len(ranked), qualified=sum(
             item.job.status is JobStatus.QUALIFIED for item in ranked
         ))
@@ -382,7 +382,7 @@ async def scrape(request: Request, repository: RepositoryDependency, score_jobs:
 def score(request: Request, repository: RepositoryDependency) -> ScoreResponse:
     try:
         parsed, resume_path = _active_profile(repository)
-        ranked = rank_jobs(repository, parsed.to_user_profile(), resume_path)
+        ranked = rank_jobs(repository, parsed.to_user_profile(clinical_systems_only=True), resume_path)
     except ValueError as error:
         raise HTTPException(status_code=500, detail=str(error)) from error
     return ScoreResponse(

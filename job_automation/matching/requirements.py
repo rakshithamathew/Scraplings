@@ -220,6 +220,8 @@ def evaluate_hard_constraints(
     job: NormalizedJob,
     *,
     target_titles: Iterable[str],
+    clinical_systems_only: bool = False,
+    candidate_skills: Iterable[str] = (),
 ) -> HardFilterResult:
     """Apply mandatory pre-scoring rules from the candidate requirements."""
     if job.is_open is False:
@@ -228,6 +230,13 @@ def evaluate_hard_constraints(
         return HardFilterResult(False, reason="Application URL is missing or invalid")
     if not role_is_relevant(job.title, job.description, target_titles):
         return HardFilterResult(False, reason="Role is not aligned with the candidate profile")
+    if clinical_systems_only:
+        from job_automation.matching.clinical import clinical_match_reason
+
+        if reason := clinical_match_reason(job, candidate_skills):
+            return HardFilterResult(False, reason=reason)
+        if job.workplace_type is WorkplaceType.ONSITE:
+            return HardFilterResult(False, reason="Search is limited to Bengaluru hybrid or worldwide remote roles")
     if job.workplace_type is WorkplaceType.REMOTE:
         if not remote_allows_india(job.location, job.description, require_evidence=job.source == "linkedin"):
             return HardFilterResult(False, reason="Remote geography excludes India or India eligibility is unconfirmed")

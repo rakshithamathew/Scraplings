@@ -74,7 +74,10 @@ def rank_jobs(
         if job.status in _PRESERVED_STATUSES and not (rescore_applied and job.status is JobStatus.APPLIED):
             continue
         normalized = _normalized_job(job)
-        eligibility = evaluate_hard_constraints(normalized, target_titles=profile.target_titles)
+        eligibility = evaluate_hard_constraints(
+            normalized, target_titles=profile.target_titles,
+            clinical_systems_only=profile.clinical_systems_only, candidate_skills=profile.skills,
+        )
         if not eligibility.eligible and job.status is JobStatus.APPLIED:
             continue
         if not eligibility.eligible and job.status is not JobStatus.APPLIED:
@@ -162,7 +165,7 @@ def main() -> int:
             raise ValueError("Upload an active resume before scoring")
         from job_automation.resume import ParsedCandidateProfile
 
-        profile = ParsedCandidateProfile.model_validate(active_resume.parsed_profile).to_user_profile()
+        profile = ParsedCandidateProfile.model_validate(active_resume.parsed_profile).to_user_profile(clinical_systems_only=True)
         ranked = rank_jobs(repository, profile, active_resume.path)
     except ValueError as error:
         LOGGER.error("%s", error)

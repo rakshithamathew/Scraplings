@@ -121,6 +121,8 @@ class LinkedInScraper(BaseJobScraper):
         }
         if bool(search.get("remote")):
             params["f_WT"] = "2"
+        elif bool(search.get("hybrid")):
+            params["f_WT"] = "3"
         if self.date_posted_seconds:
             params["f_TPR"] = f"r{self.date_posted_seconds}"
         return f"{self.careers_url.rstrip('/')}/?{urlencode(params)}"

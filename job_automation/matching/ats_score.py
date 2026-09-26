@@ -22,6 +22,7 @@ class UserProfile(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     target_titles: list[str] = Field(default_factory=list)
+    clinical_systems_only: bool = False
     skills: list[str] = Field(default_factory=list)
     preferred_skills: list[str] = Field(default_factory=list)
     frontend_fullstack_skills: list[str] = Field(default_factory=list)
@@ -139,7 +140,10 @@ def score_job(job: NormalizedJob, profile: UserProfile) -> ScoreBreakdown:
     preferred_points = 5.0 if not explicit_preferred else 10.0 * _ratio(preferred_matches, explicit_preferred)
     frontend_points = 10.0 * min(1.0, len(frontend_matches) / 4.0)
     domain_points = 5.0 if domain_matches else 0.0
-    decision = evaluate_hard_constraints(job, target_titles=profile.target_titles)
+    decision = evaluate_hard_constraints(
+        job, target_titles=profile.target_titles,
+        clinical_systems_only=profile.clinical_systems_only, candidate_skills=profile.skills,
+    )
     location_points = 10.0 if decision.eligible else 0.0
     known_years = profile.minimum_experience
     experience_match = requirement is None or requirement.minimum is None or (
